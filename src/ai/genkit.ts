@@ -1,6 +1,6 @@
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
-import {firebase} from '@genkit-ai/firebase';
+import {firebase, firebaseAuth} from '@genkit-ai/firebase/plugin';
 import {app} from '@/lib/firebase';
 
 export const ai = genkit({
@@ -9,6 +9,7 @@ export const ai = genkit({
     firebase({
       firebaseApp: app,
     }),
+    firebaseAuth(),
   ],
   model: 'googleai/gemini-2.0-flash',
 });
