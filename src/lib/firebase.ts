@@ -10,12 +10,14 @@ const firebaseConfig = {
   messagingSenderId: "194925693704"
 };
 
-function getFirebaseApp(): FirebaseApp {
-    if (getApps().length) {
-      return getApp();
-    }
-    return initializeApp(firebaseConfig);
+
+let app: FirebaseApp;
+if (getApps().length === 0) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApp();
 }
 
-export const app = getFirebaseApp();
-export const auth = getAuth(app);
+const auth = getAuth(app);
+
+export { app, auth };

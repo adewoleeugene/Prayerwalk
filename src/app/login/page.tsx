@@ -10,6 +10,8 @@ export default function LoginPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
+  // This effect is no longer strictly necessary if the hook handles redirection,
+  // but it's good for catching edge cases and initial load.
   useEffect(() => {
     if (!loading && user) {
       router.push('/');

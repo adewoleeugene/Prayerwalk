@@ -67,7 +67,7 @@ export function SignupForm() {
     setIsLoading(true);
     try {
       await createUserWithEmailAndPassword(auth, values.email, values.password);
-      // The redirect is handled by the page component
+      // The redirect is handled by the auth hook
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -83,7 +83,7 @@ export function SignupForm() {
     setIsGoogleLoading(true);
     try {
         await signInWithGoogle();
-        // The redirect is now handled by the useAuth hook.
+        // The redirect is handled by the auth hook.
     } catch (error: any) {
         toast({
             variant: "destructive",
