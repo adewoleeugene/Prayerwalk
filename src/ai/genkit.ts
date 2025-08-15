@@ -1,6 +1,8 @@
+'use server';
+
 import {genkit} from 'genkit';
 import {googleAI} from '@genkit-ai/googleai';
-import {firebase, firebaseAuth} from '@genkit-ai/firebase/plugin';
+import {firebase, firebaseAuth} from '@genkit-ai/firebase';
 import {app} from '@/lib/firebase';
 
 export const ai = genkit({
