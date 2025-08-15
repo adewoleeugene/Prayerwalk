@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, signOut as firebaseSignOut, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import { User, onAuthStateChanged, signOut as firebaseSignOut } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
@@ -9,7 +9,6 @@ interface AuthContextType {
   user: User | null;
   loading: boolean;
   signOut: () => void;
-  signInWithGoogle: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,12 +25,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     });
 
-    // Check for redirect result
-    getRedirectResult(auth).catch((error) => {
-      // Handle Errors here.
-      console.error("Error getting redirect result:", error);
-    });
-
     return () => unsubscribe();
   }, []);
 
@@ -45,21 +38,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const signInWithGoogle = async () => {
-    const auth = getFirebaseAuth();
-    const provider = new GoogleAuthProvider();
-    try {
-      await signInWithRedirect(auth, provider);
-      // After redirect, onAuthStateChanged and getRedirectResult will handle the user state.
-    } catch (error) {
-       console.error("Error during Google sign-in redirect: ", error);
-       // The UI component can show a toast if this promise rejects, though it's less common with redirect.
-       throw error;
-    }
-  };
-
   return (
-    <AuthContext.Provider value={{ user, loading, signOut, signInWithGoogle }}>
+    <AuthContext.Provider value={{ user, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );
