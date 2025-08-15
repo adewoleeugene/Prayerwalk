@@ -6,15 +6,17 @@ import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { getIcon } from '@/components/icons';
 import { Logo } from '@/components/logo';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, FolderPlus, Sparkles, Sun } from 'lucide-react';
+import { CheckCircle, FolderPlus, LogOut, Sparkles, Sun } from 'lucide-react';
 import { PrayerList } from './prayer-list';
 import { AddCategoryDialog } from './add-category-dialog';
 import { IntelligentCaptureDialog } from './intelligent-capture-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PrayerFormDialog } from './prayer-form-dialog';
+import { useAuth } from '@/hooks/use-auth';
 
 export function Dashboard() {
   const { categories, isLoaded } = usePrayerStore();
+  const { user, signOut } = useAuth();
   const [selectedView, setSelectedView] = useState('all'); // 'all', 'answered', or a categoryId
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [isCaptureDialogOpen, setIsCaptureDialogOpen] = useState(false);
@@ -82,6 +84,12 @@ export function Dashboard() {
           <Button variant="ghost" className="w-full justify-start gap-2" onClick={() => setIsCategoryDialogOpen(true)}>
             <FolderPlus /> Add Category
           </Button>
+          <Button variant="ghost" className="w-full justify-start gap-2" onClick={signOut}>
+            <LogOut /> Sign Out
+          </Button>
+          <div className="text-xs text-muted-foreground p-2 truncate">
+            {user?.email}
+          </div>
         </SidebarFooter>
       </Sidebar>
       
