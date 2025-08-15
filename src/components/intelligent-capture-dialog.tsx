@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -11,7 +11,7 @@ import { Checkbox } from './ui/checkbox';
 import { Label } from './ui/label';
 import { Textarea } from './ui/textarea';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
-import { Loader2, Mic, Upload } from 'lucide-react';
+import { Loader2, Mic, Upload, Square } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 
 type IntelligentCaptureDialogProps = {
@@ -33,42 +33,75 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   const [audioResult, setAudioResult] = useState<string | null>(null);
   const [transcribedText, setTranscribedText] = useState("");
 
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'audio') => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // Real-time recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [liveTranscript, setLiveTranscript] = useState("");
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
-    if (type === 'image') setIsLoadingImage(true);
-    if (type === 'audio') setIsLoadingAudio(true);
-    
+  useEffect(() => {
+    if (open && isRecording) {
+      handleStopRecording();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
+  const handleStartRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+      mediaRecorderRef.current.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        audioChunksRef.current = [];
+        if (audioBlob.size > 0) {
+          await processAudioChunk(audioBlob);
+        }
+        stream.getTracks().forEach(track => track.stop()); // Stop the microphone access
+      };
+
+      // Transcribe in chunks
+      mediaRecorderRef.current.start(5000); // 5-second chunks
+      setIsRecording(true);
+      setLiveTranscript("");
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+      toast({
+        variant: "destructive",
+        title: "Microphone Access Denied",
+        description: "Please allow microphone access in your browser settings.",
+      });
+    }
+  };
+  
+  const processAudioChunk = async (blob: Blob) => {
     const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = async () => {
-      const dataUri = reader.result as string;
+    reader.readAsDataURL(blob);
+    reader.onloadend = async () => {
+      const base64Audio = reader.result as string;
       try {
-        if (type === 'image') {
-          const result = await convertImageTextToPrayerPoints({ photoDataUri: dataUri });
-          setImageResults(result);
-        }
-        if (type === 'audio') {
-          const result = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
-          setAudioResult(result.transcribedText);
-          setTranscribedText(result.transcribedText);
-        }
+        const result = await transcribeAudioToPrayerPoints({ audioDataUri: base64Audio });
+        setLiveTranscript(prev => prev + result.transcribedText + " ");
       } catch (error) {
-        toast({ variant: "destructive", title: "AI Processing Failed", description: "Could not process the file. Please try again." });
-        console.error(error);
-      } finally {
-        if (type === 'image') setIsLoadingImage(false);
-        if (type === 'audio') setIsLoadingAudio(false);
+        console.error("Transcription error:", error);
+        toast({
+          variant: "destructive",
+          title: "Transcription Failed",
+          description: "Could not transcribe the audio chunk.",
+        });
       }
-    };
-    reader.onerror = () => {
-        toast({ variant: "destructive", title: "File Read Error", description: "Could not read the selected file." });
-        if (type === 'image') setIsLoadingImage(false);
-        if (type === 'audio') setIsLoadingAudio(false);
     };
   };
 
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+  };
+  
   const handleAddSelectedPrayers = () => {
     if (!imageResults || !categories.length) return;
     const defaultCategoryId = categories[0].id;
@@ -94,18 +127,27 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     setTranscribedText("");
     if (audioInputRef.current) audioInputRef.current.value = "";
   }
+
+  const resetLiveTab = () => {
+    if (isRecording) {
+      handleStopRecording();
+    }
+    setLiveTranscript("");
+  }
   
   const handleDialogClose = (isOpen: boolean) => {
     if (!isOpen) {
       resetAudioTab();
       resetImageTab();
+      resetLiveTab();
     }
     onOpenChange(isOpen);
   };
 
   const handleTabChange = (value: string) => {
-    if (value === 'image') resetAudioTab();
-    if (value === 'audio') resetImageTab();
+    resetAudioTab();
+    resetImageTab();
+    resetLiveTab();
   };
 
   return (
@@ -113,10 +155,14 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Intelligent Capture</DialogTitle>
-          <DialogDescription>Generate prayer points from an image or audio file.</DialogDescription>
+          <DialogDescription>Generate prayer points from an image, audio file, or live recording.</DialogDescription>
         </DialogHeader>
         <Tabs defaultValue="image" className="w-full" onValueChange={handleTabChange}>
-          <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="image">From Image</TabsTrigger><TabsTrigger value="audio">From Audio</TabsTrigger></TabsList>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="image">From Image</TabsTrigger>
+            <TabsTrigger value="audio">From Audio</TabsTrigger>
+            <TabsTrigger value="live">Live</TabsTrigger>
+          </TabsList>
           
           <TabsContent value="image" className="mt-4 min-h-[300px]">
             {!isLoadingImage && !imageResults && (
@@ -164,6 +210,33 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                  <p className="text-sm text-muted-foreground">You can copy text from here to create new prayer points manually.</p>
               </div>
             )}
+          </TabsContent>
+
+          <TabsContent value="live" className="mt-4 min-h-[300px]">
+            <div className="space-y-4">
+                {isRecording ? (
+                    <Button onClick={handleStopRecording} variant="destructive" className="w-full">
+                        <Square className="mr-2 h-4 w-4" /> Stop Recording
+                    </Button>
+                ) : (
+                    <Button onClick={handleStartRecording} className="w-full">
+                        <Mic className="mr-2 h-4 w-4" /> Start Recording
+                    </Button>
+                )}
+
+                <Label htmlFor="live-transcription">Live Transcription:</Label>
+                <Textarea
+                    id="live-transcription"
+                    value={liveTranscript}
+                    readOnly={isRecording}
+                    onChange={e => setLiveTranscript(e.target.value)}
+                    rows={8}
+                    placeholder={isRecording ? "Listening..." : "Your live transcription will appear here."}
+                />
+                 <p className="text-sm text-muted-foreground">
+                    You can copy text from here to create new prayer points manually.
+                </p>
+            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>
