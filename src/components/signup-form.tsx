@@ -83,12 +83,12 @@ export function SignupForm() {
     setIsGoogleLoading(true);
     try {
         await signInWithGoogle();
-        // Redirect is handled by the page component
+        // The redirect is handled by the page component, which listens to auth state changes.
     } catch (error: any) {
         toast({
             variant: "destructive",
             title: "Google Sign In Failed",
-            description: error.message,
+            description: "Could not sign in with Google. Please try again.",
         });
     } finally {
         setIsGoogleLoading(false);
