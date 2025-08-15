@@ -85,7 +85,7 @@ export function LoginForm() {
     setIsGoogleLoading(true);
     try {
         await signInWithGoogle();
-        // The redirect is handled by the page component, which listens to auth state changes.
+        // The redirect is now handled by the useAuth hook.
     } catch (error: any) {
         toast({
             variant: "destructive",
