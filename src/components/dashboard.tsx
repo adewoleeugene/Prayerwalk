@@ -3,13 +3,13 @@
 import React, { useState } from 'react';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { Button } from '@/components/ui/button';
-import { FolderPlus } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { AddCategoryDialog } from './add-category-dialog';
 import { CategoryCard } from './category-card';
 import { ScrollArea } from './ui/scroll-area';
 import { Skeleton } from './ui/skeleton';
-import { useRouter } from 'next/navigation';
 import { PrayerList } from './prayer-list';
+import { Card, CardContent } from './ui/card';
 
 export function Dashboard() {
   const { categories, prayers, isLoaded } = usePrayerStore();
@@ -27,10 +27,7 @@ export function Dashboard() {
     <div className="flex flex-col min-h-screen">
       <header className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
         <h1 className="text-xl font-bold font-headline">My Prayer Library</h1>
-        <Button variant="ghost" size="icon" onClick={() => setIsCategoryDialogOpen(true)}>
-            <FolderPlus />
-            <span className="sr-only">Add Category</span>
-        </Button>
+        <div className="w-10" />
       </header>
 
       <main className="flex-1">
@@ -66,6 +63,15 @@ export function Dashboard() {
                     onClick={() => setSelectedView(category.id)}
                   />
                 ))}
+                <Card
+                  className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border-dashed border-2 hover:border-primary"
+                  onClick={() => setIsCategoryDialogOpen(true)}
+                >
+                  <CardContent className="p-4 flex flex-col items-center justify-center h-full text-primary">
+                    <PlusCircle className="h-8 w-8" />
+                    <h3 className="text-lg font-semibold mt-2">Add Category</h3>
+                  </CardContent>
+                </Card>
               </div>
             )}
           </div>
