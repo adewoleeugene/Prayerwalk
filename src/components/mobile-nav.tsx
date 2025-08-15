@@ -1,26 +1,30 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { CheckCircle, Home, Plus, Sparkles } from "lucide-react";
+import { Home, Plus, Sparkles, User } from "lucide-react";
+import { useAuth } from "@/hooks/use-auth";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "./ui/dropdown-menu";
 
 type MobileNavProps = {
-  selectedView: string;
-  setSelectedView: (view: string) => void;
   onCaptureClick: () => void;
+  onAddPrayerClick: () => void;
 };
 
-export function MobileNav({ selectedView, setSelectedView, onCaptureClick }: MobileNavProps) {
+export function MobileNav({ onCaptureClick, onAddPrayerClick }: MobileNavProps) {
+  const { user } = useAuth();
   return (
     <div className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background border-t md:hidden">
       <div className="grid h-full max-w-lg grid-cols-3 mx-auto font-medium">
+        
         <Button
           variant="ghost"
-          className={`inline-flex flex-col items-center justify-center px-5 rounded-none h-full ${selectedView === 'all' ? 'text-primary' : 'text-muted-foreground'}`}
-          onClick={() => setSelectedView('all')}
+          className="inline-flex flex-col items-center justify-center px-5 rounded-none h-full text-muted-foreground"
+          onClick={onAddPrayerClick}
         >
-          <Home className="w-5 h-5 mb-1" />
-          <span className="text-xs">All Prayers</span>
+          <Plus className="w-6 h-6 mb-1" />
+          <span className="text-xs">Add Prayer</span>
         </Button>
+
         <div className="flex items-center justify-center">
             <Button
               size="lg"
@@ -31,14 +35,13 @@ export function MobileNav({ selectedView, setSelectedView, onCaptureClick }: Mob
                 <span className="sr-only">Capture</span>
             </Button>
         </div>
-        <Button
-          variant="ghost"
-          className={`inline-flex flex-col items-center justify-center px-5 rounded-none h-full ${selectedView === 'answered' ? 'text-primary' : 'text-muted-foreground'}`}
-          onClick={() => setSelectedView('answered')}
-        >
-          <CheckCircle className="w-5 h-5 mb-1" />
-          <span className="text-xs">Answered</span>
-        </Button>
+       
+        <div className="flex items-center justify-center">
+             <div className="text-xs text-muted-foreground p-2 truncate">
+                {user?.email}
+            </div>
+        </div>
+
       </div>
     </div>
   );
