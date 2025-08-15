@@ -11,12 +11,14 @@ import { SettingsPage } from "@/app/settings/page";
 import { MobileNav } from "@/components/mobile-nav";
 import { IntelligentCaptureDialog } from "@/components/intelligent-capture-dialog";
 import { HomePage } from "@/components/home-page";
+import ProfilePage from "./profile/page";
 
 export type View = 
   | { type: 'home' } 
   | { type: 'library' }
   | { type: 'journal' }
-  | { type: 'settings' };
+  | { type: 'settings' }
+  | { type: 'profile' };
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -47,7 +49,9 @@ export default function Home() {
       case 'journal':
         return <JournalPage />;
       case 'settings':
-        return <SettingsPage />;
+        return <SettingsPage setView={setView} />;
+      case 'profile':
+        return <ProfilePage setView={setView} />;
       default:
         return <HomePage onCaptureClick={() => setIsCaptureDialogOpen(true)} />;
     }

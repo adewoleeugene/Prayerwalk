@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FolderPlus, Footprints, LogOut, Sparkles } from 'lucide-react';
+import { FolderPlus, Footprints, Sparkles } from 'lucide-react';
 import { getDailyVerse, DailyVerse } from '@/ai/flows/get-daily-verse';
 import { Skeleton } from './ui/skeleton';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
@@ -17,7 +17,7 @@ type HomePageProps = {
 };
 
 export function HomePage({ onCaptureClick }: HomePageProps) {
-  const { user, signOut } = useAuth();
+  const { user } = useAuth();
   const { prayers, isLoaded } = usePrayerStore();
   const router = useRouter();
   const [greeting, setGreeting] = useState('');
@@ -45,10 +45,6 @@ export function HomePage({ onCaptureClick }: HomePageProps) {
       <div className="flex flex-col">
         <header className="flex items-center justify-between p-4">
           <h1 className="text-xl font-bold font-headline capitalize">{greeting}, {userName}!</h1>
-          <Button variant="ghost" size="icon" onClick={signOut}>
-            <LogOut />
-            <span className="sr-only">Sign Out</span>
-          </Button>
         </header>
 
         <main className="px-4 pb-4 space-y-6">
