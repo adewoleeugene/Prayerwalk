@@ -1,4 +1,4 @@
-import { initializeApp, getApps, getApp } from "firebase/app";
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
@@ -11,7 +11,12 @@ const firebaseConfig = {
   messagingSenderId: "194925693704"
 };
 
-const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
-const auth = getAuth(app);
+function getFirebaseApp(): FirebaseApp {
+    if (getApps().length) {
+      return getApp();
+    }
+    return initializeApp(firebaseConfig);
+}
 
-export { app, auth };
+export const app = getFirebaseApp();
+export const auth = getAuth(app);
