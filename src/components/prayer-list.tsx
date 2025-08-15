@@ -21,17 +21,21 @@ export function PrayerList({ view, onBack }: PrayerListProps) {
   const filteredPrayers = prayers.filter(p => {
     if (view === 'all') return p.status === 'active';
     if (view === 'answered') return p.status === 'answered';
-    return p.categoryId === view;
+    return p.categoryId === view && p.status === 'active';
   });
   
-  const showPrayerWalkButton = view !== 'all' && view !== 'answered' && filteredPrayers.filter(p => p.status === 'active').length > 0;
+  const showPrayerWalkButton = view !== 'all' && view !== 'answered' && filteredPrayers.length > 0;
 
   const category = categories.find(c => c.id === view);
   
-  const viewTitle =
-    view === 'all' ? 'All Prayers' :
-    view === 'answered' ? 'Answered Prayers' :
-    category?.name || 'Prayers';
+  let viewTitle = 'Prayers';
+  if(view === 'all') {
+    viewTitle = 'All Active Prayers';
+  } else if (view === 'answered') {
+    viewTitle = 'Answered Prayers';
+  } else if (category) {
+    viewTitle = category.name;
+  }
   
   const ViewIcon =
     view === 'all' ? getIcon('Sun') :

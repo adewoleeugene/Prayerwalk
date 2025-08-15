@@ -12,27 +12,39 @@ type MobileNavProps = {
 
 export function MobileNav({ activeView, onNavigate, onCaptureClick }: MobileNavProps) {
   const navItems = [
-    { view: { type: 'dashboard' }, icon: Home, label: 'Home' },
-    { view: { type: 'prayerList', viewId: 'all' }, icon: Library, label: 'Prayers' },
+    { view: { type: 'home' }, icon: Home, label: 'Home' },
+    { view: { type: 'library' }, icon: Library, label: 'Library' },
     { view: { type: 'journal' }, icon: Notebook, label: 'Journal' },
     { view: { type: 'settings' }, icon: Settings, label: 'Settings' },
   ];
+
+  const getButtonClass = (viewType: View['type']) => {
+    return `inline-flex flex-col items-center justify-center px-5 rounded-none h-full ${activeView === viewType ? 'text-primary' : 'text-muted-foreground'}`;
+  }
 
   return (
     <div className="fixed bottom-0 left-0 z-50 w-full h-16 bg-background border-t md:hidden">
       <div className="grid h-full grid-cols-5 mx-auto font-medium">
         
-        {navItems.slice(0, 2).map((item) => (
-          <Button
-            key={item.label}
-            variant="ghost"
-            className={`inline-flex flex-col items-center justify-center px-5 rounded-none h-full ${activeView === item.view.type ? 'text-primary' : 'text-muted-foreground'}`}
-            onClick={() => onNavigate(item.view as any)}
-          >
-            <item.icon className="w-6 h-6 mb-1" />
-            <span className="text-xs">{item.label}</span>
-          </Button>
-        ))}
+        <Button
+          key={navItems[0].label}
+          variant="ghost"
+          className={getButtonClass(navItems[0].view.type)}
+          onClick={() => onNavigate(navItems[0].view)}
+        >
+          <navItems[0].icon className="w-6 h-6 mb-1" />
+          <span className="text-xs">{navItems[0].label}</span>
+        </Button>
+        
+        <Button
+          key={navItems[1].label}
+          variant="ghost"
+          className={getButtonClass(navItems[1].view.type)}
+          onClick={() => onNavigate(navItems[1].view)}
+        >
+          <navItems[1].icon className="w-6 h-6 mb-1" />
+          <span className="text-xs">{navItems[1].label}</span>
+        </Button>
 
         <div className="flex items-center justify-center">
           <Button
@@ -44,18 +56,26 @@ export function MobileNav({ activeView, onNavigate, onCaptureClick }: MobileNavP
             <span className="sr-only">Take Note</span>
           </Button>
         </div>
-
-        {navItems.slice(2, 4).map((item) => (
-          <Button
-            key={item.label}
-            variant="ghost"
-            className={`inline-flex flex-col items-center justify-center px-5 rounded-none h-full ${activeView === item.view.type ? 'text-primary' : 'text-muted-foreground'}`}
-            onClick={() => onNavigate(item.view as any)}
-          >
-            <item.icon className="w-6 h-6 mb-1" />
-            <span className="text-xs">{item.label}</span>
-          </Button>
-        ))}
+        
+        <Button
+          key={navItems[2].label}
+          variant="ghost"
+          className={getButtonClass(navItems[2].view.type)}
+          onClick={() => onNavigate(navItems[2].view)}
+        >
+          <navItems[2].icon className="w-6 h-6 mb-1" />
+          <span className="text-xs">{navItems[2].label}</span>
+        </Button>
+        
+        <Button
+          key={navItems[3].label}
+          variant="ghost"
+          className={getButtonClass(navItems[3].view.type)}
+          onClick={() => onNavigate(navItems[3].view)}
+        >
+          <navItems[3].icon className="w-6 h-6 mb-1" />
+          <span className="text-xs">{navItems[3].label}</span>
+        </Button>
       </div>
     </div>
   );

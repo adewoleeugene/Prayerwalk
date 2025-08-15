@@ -6,22 +6,22 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { PrayerList } from "@/components/prayer-list";
 import { JournalPage } from "@/app/journal/page";
 import { SettingsPage } from "@/app/settings/page";
 import { MobileNav } from "@/components/mobile-nav";
 import { IntelligentCaptureDialog } from "@/components/intelligent-capture-dialog";
+import { HomePage } from "@/components/home-page";
 
 export type View = 
-  | { type: 'dashboard' } 
-  | { type: 'prayerList', viewId: string }
+  | { type: 'home' } 
+  | { type: 'library' }
   | { type: 'journal' }
   | { type: 'settings' };
 
 export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [view, setView] = useState<View>({ type: 'dashboard' });
+  const [view, setView] = useState<View>({ type: 'home' });
   const [isCaptureDialogOpen, setIsCaptureDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -40,16 +40,16 @@ export default function Home() {
   
   const renderView = () => {
     switch(view.type) {
-      case 'dashboard':
-        return <Dashboard onSelectView={(viewId) => setView({ type: 'prayerList', viewId })} />;
-      case 'prayerList':
-        return <PrayerList view={view.viewId} onBack={() => setView({ type: 'dashboard' })} />;
+      case 'home':
+        return <HomePage onCaptureClick={() => setIsCaptureDialogOpen(true)} />;
+      case 'library':
+        return <Dashboard />;
       case 'journal':
         return <JournalPage />;
       case 'settings':
         return <SettingsPage />;
       default:
-        return <Dashboard onSelectView={(viewId) => setView({ type: 'prayerList', viewId })} />;
+        return <HomePage onCaptureClick={() => setIsCaptureDialogOpen(true)} />;
     }
   }
 
