@@ -12,10 +12,10 @@ type MobileNavProps = {
 
 export function MobileNav({ activeView, onNavigate, onCaptureClick }: MobileNavProps) {
   const navItems = [
-    { view: { type: 'home' }, icon: Home, label: 'Home' },
-    { view: { type: 'library' }, icon: Library, label: 'Library' },
-    { view: { type: 'journal' }, icon: Notebook, label: 'Journal' },
-    { view: { type: 'settings' }, icon: Settings, label: 'Settings' },
+    { view: { type: 'home' } as View, icon: Home, label: 'Home' },
+    { view: { type: 'library' } as View, icon: Library, label: 'Library' },
+    { view: { type: 'journal' } as View, icon: Notebook, label: 'Journal' },
+    { view: { type: 'settings' } as View, icon: Settings, label: 'Settings' },
   ];
 
   const getButtonClass = (viewType: View['type']) => {
