@@ -1,16 +1,28 @@
 "use client";
 
+import { useState } from "react";
 import { Dashboard } from "@/components/dashboard";
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { PrayerList } from "@/components/prayer-list";
+import { JournalPage } from "@/app/journal/page";
+import { SettingsPage } from "@/app/settings/page";
+import { MobileNav } from "@/components/mobile-nav";
+import { IntelligentCaptureDialog } from "@/components/intelligent-capture-dialog";
+
+export type View = 
+  | { type: 'dashboard' } 
+  | { type: 'prayerList', viewId: string }
+  | { type: 'journal' }
+  | { type: 'settings' };
 
 export default function Home() {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [view, setView] = useState<{ type: 'dashboard' } | { type: 'prayerList', viewId: string }>({ type: 'dashboard' });
+  const [view, setView] = useState<View>({ type: 'dashboard' });
+  const [isCaptureDialogOpen, setIsCaptureDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -25,14 +37,31 @@ export default function Home() {
       </div>
     );
   }
+  
+  const renderView = () => {
+    switch(view.type) {
+      case 'dashboard':
+        return <Dashboard onSelectView={(viewId) => setView({ type: 'prayerList', viewId })} />;
+      case 'prayerList':
+        return <PrayerList view={view.viewId} onBack={() => setView({ type: 'dashboard' })} />;
+      case 'journal':
+        return <JournalPage />;
+      case 'settings':
+        return <SettingsPage />;
+      default:
+        return <Dashboard onSelectView={(viewId) => setView({ type: 'prayerList', viewId })} />;
+    }
+  }
 
   return (
-    <main>
-      {view.type === 'dashboard' ? (
-        <Dashboard onSelectView={(viewId) => setView({ type: 'prayerList', viewId })} />
-      ) : (
-        <PrayerList view={view.viewId} onBack={() => setView({ type: 'dashboard' })} />
-      )}
+    <main className="pb-20 md:pb-0">
+      {renderView()}
+      <MobileNav
+        activeView={view.type}
+        onNavigate={setView}
+        onCaptureClick={() => setIsCaptureDialogOpen(true)}
+      />
+      <IntelligentCaptureDialog open={isCaptureDialogOpen} onOpenChange={setIsCaptureDialogOpen} />
     </main>
   );
 }
