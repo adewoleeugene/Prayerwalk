@@ -43,7 +43,7 @@ export default function Home() {
   const renderView = () => {
     switch(view.type) {
       case 'home':
-        return <HomePage onCaptureClick={() => setIsCaptureDialogOpen(true)} />;
+        return <HomePage onCaptureClick={() => setIsCaptureDialogOpen(true)} setView={setView} />;
       case 'library':
         return <Dashboard />;
       case 'journal':
@@ -53,7 +53,7 @@ export default function Home() {
       case 'profile':
         return <ProfilePage setView={setView} />;
       default:
-        return <HomePage onCaptureClick={() => setIsCaptureDialogOpen(true)} />;
+        return <HomePage onCaptureClick={() => setIsCaptureDialogOpen(true)} setView={setView} />;
     }
   }
 

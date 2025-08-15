@@ -11,12 +11,15 @@ import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { PrayerCard } from './prayer-card';
 import { useRouter } from 'next/navigation';
 import { AddCategoryDialog } from './add-category-dialog';
+import { Avatar, AvatarFallback } from './ui/avatar';
+import type { View } from '@/app/page';
 
 type HomePageProps = {
   onCaptureClick: () => void;
+  setView: (view: View) => void;
 };
 
-export function HomePage({ onCaptureClick }: HomePageProps) {
+export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const { user } = useAuth();
   const { prayers, isLoaded } = usePrayerStore();
   const router = useRouter();
@@ -39,12 +42,16 @@ export function HomePage({ onCaptureClick }: HomePageProps) {
 
   const recentPrayers = prayers.slice(0, 3);
   const userName = user?.displayName || user?.email?.split('@')[0] || 'friend';
+  const userInitial = (user?.displayName || user?.email || 'U').charAt(0).toUpperCase();
 
   return (
     <>
       <div className="flex flex-col">
         <header className="flex items-center justify-between p-4">
           <h1 className="text-xl font-bold font-headline capitalize">{greeting}, {userName}!</h1>
+          <Avatar className="cursor-pointer" onClick={() => setView({ type: 'settings' })}>
+            <AvatarFallback>{userInitial}</AvatarFallback>
+          </Avatar>
         </header>
 
         <main className="px-4 pb-4 space-y-6">
