@@ -35,7 +35,7 @@ export function PrayerList({ view }: PrayerListProps) {
   }
 
   return (
-    <ScrollArea className="h-[calc(100vh-65px)]">
+    <ScrollArea className="h-[calc(100vh-129px)] md:h-[calc(100vh-65px)]">
       <div className="p-4 md:p-6">
         {showPrayerWalkButton && (
           <div className="mb-4">
@@ -55,7 +55,7 @@ export function PrayerList({ view }: PrayerListProps) {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-[60vh] text-center text-muted-foreground">
+          <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] text-center text-muted-foreground">
              <p className="text-lg font-medium">No prayer points here yet.</p>
              <p className="text-sm">Add a new prayer point or use the Capture tool.</p>
           </div>

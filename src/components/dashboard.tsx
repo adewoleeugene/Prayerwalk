@@ -13,6 +13,7 @@ import { IntelligentCaptureDialog } from './intelligent-capture-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PrayerFormDialog } from './prayer-form-dialog';
 import { useAuth } from '@/hooks/use-auth';
+import { MobileNav } from './mobile-nav';
 
 export function Dashboard() {
   const { categories, isLoaded } = usePrayerStore();
@@ -100,17 +101,25 @@ export function Dashboard() {
              <h1 className="text-2xl font-bold font-headline">{viewTitle}</h1>
           </div>
           <div className="flex gap-2">
-            <Button onClick={() => setIsPrayerFormOpen(true)} variant="outline">
+             <Button onClick={() => setIsPrayerFormOpen(true)} variant="outline" className="hidden sm:inline-flex">
               Add Prayer
             </Button>
-            <Button onClick={() => setIsCaptureDialogOpen(true)}>
+            <Button onClick={() => setIsCaptureDialogOpen(true)} className="hidden sm:inline-flex">
               <Sparkles className="mr-2 h-4 w-4" />
               Capture
             </Button>
           </div>
         </header>
         
-        <PrayerList view={selectedView} />
+        <div className="pb-20 md:pb-0">
+          <PrayerList view={selectedView} />
+        </div>
+
+        <MobileNav 
+          selectedView={selectedView}
+          setSelectedView={setSelectedView}
+          onCaptureClick={() => setIsCaptureDialogOpen(true)}
+        />
         
       </SidebarInset>
 

@@ -1,4 +1,4 @@
-import { BookOpen, Briefcase, Heart, Users, CheckCircle, PlusCircle, LucideIcon, Folder, Home } from 'lucide-react';
+import { BookOpen, Briefcase, Heart, Users, CheckCircle, PlusCircle, LucideIcon, Folder, Home, Plus } from 'lucide-react';
 
 export const iconMap: { [key: string]: LucideIcon } = {
   BookOpen,
@@ -9,6 +9,7 @@ export const iconMap: { [key: string]: LucideIcon } = {
   PlusCircle,
   Folder,
   Home,
+  Plus,
   Default: Heart,
 };
 
