@@ -24,7 +24,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { getFirebaseAuth } from "@/lib/firebase";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { Logo } from "./logo";
@@ -66,6 +66,7 @@ export function SignupForm() {
   async function onSubmit(values: z.infer<typeof signupSchema>) {
     setIsLoading(true);
     try {
+      const auth = getFirebaseAuth();
       await createUserWithEmailAndPassword(auth, values.email, values.password);
       // The redirect is handled by the auth hook
     } catch (error: any) {
@@ -83,14 +84,13 @@ export function SignupForm() {
     setIsGoogleLoading(true);
     try {
         await signInWithGoogle();
-        // The redirect is handled by the auth hook.
+        // The redirect flow is now handled by the auth hook.
     } catch (error: any) {
         toast({
             variant: "destructive",
             title: "Google Sign In Failed",
             description: "Could not sign in with Google. Please try again.",
         });
-    } finally {
         setIsGoogleLoading(false);
     }
   }

@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, Auth } from "firebase/auth";
 
 const firebaseConfig = {
   projectId: "praysmart",
@@ -18,6 +18,14 @@ if (getApps().length === 0) {
   app = getApp();
 }
 
-const auth = getAuth(app);
+let auth: Auth;
+// This function helps avoid issues with server-side rendering (SSR)
+// by ensuring that getAuth() is only called on the client.
+export const getFirebaseAuth = () => {
+  if (!auth) {
+    auth = getAuth(app);
+  }
+  return auth;
+}
 
-export { app, auth };
+export { app };

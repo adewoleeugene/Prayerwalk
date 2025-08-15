@@ -1,8 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged, signOut as firebaseSignOut, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { User, onAuthStateChanged, signOut as firebaseSignOut, GoogleAuthProvider, signInWithRedirect, getRedirectResult } from 'firebase/auth';
+import { getFirebaseAuth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
 interface AuthContextType {
@@ -20,19 +20,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const router = useRouter();
 
   useEffect(() => {
+    const auth = getFirebaseAuth();
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
-      if (user) {
-        router.push('/');
-      }
+    });
+
+    // Check for redirect result
+    getRedirectResult(auth).catch((error) => {
+      // Handle Errors here.
+      console.error("Error getting redirect result:", error);
     });
 
     return () => unsubscribe();
-  }, [router]);
+  }, []);
 
   const signOut = async () => {
     try {
+      const auth = getFirebaseAuth();
       await firebaseSignOut(auth);
       router.push('/login');
     } catch (error) {
@@ -41,13 +46,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signInWithGoogle = async () => {
+    const auth = getFirebaseAuth();
     const provider = new GoogleAuthProvider();
     try {
-      await signInWithPopup(auth, provider);
-      // The onAuthStateChanged listener will handle the redirect.
+      await signInWithRedirect(auth, provider);
+      // After redirect, onAuthStateChanged and getRedirectResult will handle the user state.
     } catch (error) {
-       console.error("Error during Google sign-in: ", error);
-       // The UI component will handle showing a toast to the user
+       console.error("Error during Google sign-in redirect: ", error);
+       // The UI component can show a toast if this promise rejects, though it's less common with redirect.
        throw error;
     }
   };
