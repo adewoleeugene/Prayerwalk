@@ -61,20 +61,15 @@ function JournalEntryCard({ entry }: { entry: ReturnType<typeof useJournalStore>
           </CardHeader>
           <CardContent>
               <Accordion type="single" collapsible className="w-full">
-                  {entry.sourceData && (
+                  {entry.sourceType !== 'text' && entry.sourceData && (
                       <AccordionItem value="source">
                           <AccordionTrigger>View Source</AccordionTrigger>
                           <AccordionContent>
-                              {entry.sourceType === 'image' && entry.sourceData && (
-                                  <Image src={entry.sourceData} alt="Captured image" width={400} height={300} className="rounded-md object-contain" />
+                              {entry.sourceType === 'image' && (
+                                  <Image src={entry.sourceData!} alt="Captured image" width={400} height={300} className="rounded-md object-contain" />
                               )}
-                              {(entry.sourceType === 'audio' || entry.sourceType === 'live') && entry.sourceData && (
+                              {(entry.sourceType === 'audio' || entry.sourceType === 'live') && (
                                   <audio controls src={entry.sourceData} className="w-full" />
-                              )}
-                              {entry.sourceType === 'text' && (
-                                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                                      <p>{entry.notes}</p>
-                                  </div>
                               )}
                           </AccordionContent>
                       </AccordionItem>
