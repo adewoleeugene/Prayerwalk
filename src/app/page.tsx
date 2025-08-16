@@ -45,7 +45,7 @@ export default function Home() {
       case 'home':
         return <HomePage onCaptureClick={() => setIsCaptureDialogOpen(true)} setView={setView} />;
       case 'library':
-        return <Dashboard />;
+        return <Dashboard onCaptureClick={() => setIsCaptureDialogOpen(true)} />;
       case 'journal':
         return <JournalPage />;
       case 'settings':

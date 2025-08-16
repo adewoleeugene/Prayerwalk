@@ -1,22 +1,26 @@
+
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { PrayerCard } from './prayer-card';
 import { ScrollArea } from './ui/scroll-area';
 import { Button } from './ui/button';
 import Link from 'next/link';
-import { ArrowLeft, Footprints } from 'lucide-react';
+import { ArrowLeft, Footprints, Plus } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { getIcon } from './icons';
+import { PrayerFormDialog } from './prayer-form-dialog';
 
 type PrayerListProps = {
   view: string;
   onBack: () => void;
+  onCaptureClick: () => void;
 };
 
-export function PrayerList({ view, onBack }: PrayerListProps) {
+export function PrayerList({ view, onBack, onCaptureClick }: PrayerListProps) {
   const { prayers, categories, isLoaded } = usePrayerStore();
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const filteredPrayers = prayers.filter(p => {
     if (view === 'all') return p.status === 'active';
@@ -54,7 +58,7 @@ export function PrayerList({ view, onBack }: PrayerListProps) {
   }
 
   return (
-    <>
+    <div className="flex flex-col h-screen">
       <header className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
         <Button variant="ghost" size="icon" onClick={onBack}>
           <ArrowLeft />
@@ -66,8 +70,8 @@ export function PrayerList({ view, onBack }: PrayerListProps) {
         <div className="w-10"/>
       </header>
 
-      <ScrollArea className="h-[calc(100vh-129px)] md:h-[calc(100vh-65px)]">
-        <div className="p-4 md:p-6">
+      <ScrollArea className="flex-1 h-[calc(100vh-129px)] md:h-[calc(100vh-65px)]">
+        <div className="p-4 md:p-6 pb-24">
           {showPrayerWalkButton && (
             <div className="mb-4">
               <Button asChild className="w-full" size="lg">
@@ -93,6 +97,19 @@ export function PrayerList({ view, onBack }: PrayerListProps) {
           )}
         </div>
       </ScrollArea>
-    </>
+      <div className="fixed bottom-24 right-4 md:hidden">
+          <Button 
+            className="rounded-full w-14 h-14 shadow-lg" 
+            onClick={onCaptureClick}
+          >
+              <Plus className="h-6 w-6" />
+          </Button>
+      </div>
+      <PrayerFormDialog 
+        open={isFormOpen} 
+        onOpenChange={setIsFormOpen} 
+        defaultValues={view !== 'all' && view !== 'answered' ? { categoryId: view } : undefined}
+      />
+    </div>
   );
 }

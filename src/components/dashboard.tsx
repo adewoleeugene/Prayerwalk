@@ -12,7 +12,11 @@ import { Skeleton } from './ui/skeleton';
 import { PrayerList } from './prayer-list';
 import { Card, CardContent } from './ui/card';
 
-export function Dashboard() {
+type DashboardProps = {
+  onCaptureClick: () => void;
+};
+
+export function Dashboard({ onCaptureClick }: DashboardProps) {
   const { categories, prayers, isLoaded } = usePrayerStore();
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [selectedView, setSelectedView] = useState<string | null>(null);
@@ -21,7 +25,7 @@ export function Dashboard() {
   const allActiveCount = prayers.filter(p => p.status === 'active').length;
 
   if (selectedView) {
-    return <PrayerList view={selectedView} onBack={() => setSelectedView(null)} />;
+    return <PrayerList view={selectedView} onBack={() => setSelectedView(null)} onCaptureClick={onCaptureClick} />;
   }
 
   return (
