@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { FolderPlus, PlusCircle } from 'lucide-react';
 import { AddCategoryDialog } from './add-category-dialog';
 import { CategoryCard } from './category-card';
 import { ScrollArea } from './ui/scroll-area';
@@ -46,15 +46,15 @@ export function Dashboard() {
               </div>
             ) : (
               <div className="space-y-4">
-                <Card
-                  className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border-dashed border-2 border-primary bg-transparent"
-                  onClick={() => setIsCategoryDialogOpen(true)}
-                >
-                  <CardContent className="p-4 flex items-center justify-center gap-4 text-primary">
-                    <PlusCircle className="h-6 w-6" />
-                    <h3 className="text-lg font-semibold">Add New Category</h3>
-                  </CardContent>
-                </Card>
+                  <Card
+                    className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border-dashed border-2 border-primary/50 bg-primary/5"
+                    onClick={() => setIsCategoryDialogOpen(true)}
+                  >
+                    <CardContent className="p-4 flex items-center justify-center gap-4 text-primary">
+                      <FolderPlus className="h-6 w-6" />
+                      <h3 className="text-lg font-semibold">Add New Category</h3>
+                    </CardContent>
+                  </Card>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <CategoryCard
