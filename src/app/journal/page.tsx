@@ -71,6 +71,11 @@ function JournalEntryCard({ entry }: { entry: ReturnType<typeof useJournalStore>
                               {(entry.sourceType === 'audio' || entry.sourceType === 'live') && entry.sourceData && (
                                   <audio controls src={entry.sourceData} className="w-full" />
                               )}
+                              {entry.sourceType === 'text' && (
+                                  <div className="prose prose-sm dark:prose-invert max-w-none">
+                                      <p>{entry.notes}</p>
+                                  </div>
+                              )}
                           </AccordionContent>
                       </AccordionItem>
                   )}
