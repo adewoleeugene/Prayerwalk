@@ -4,32 +4,48 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { convertImageTextToPrayerPoints, ConvertImageTextToPrayerPointsOutput } from '@/ai/flows/convert-image-text-to-prayer-points';
-import { transcribeAudioToPrayerPoints, TranscribeAudioToPrayerPointsOutput } from '@/ai/flows/transcribe-audio-to-prayer-points';
+import { convertImageTextToPrayerPoints } from '@/ai/flows/convert-image-text-to-prayer-points';
+import { transcribeAudioToPrayerPoints } from '@/ai/flows/transcribe-audio-to-prayer-points';
 import { useToast } from '@/hooks/use-toast';
 import { useJournalStore } from '@/hooks/use-journal-store';
-import { Loader2, Mic, Upload, Square, NotebookText, Save } from 'lucide-react';
+import { usePrayerStore } from '@/hooks/use-prayer-store';
+import { Loader2, Mic, Upload, Square, NotebookText, Save, Library } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
-import { generatePrayerPointsFromText, GeneratePrayerPointsFromTextOutput } from '@/ai/flows/generate-prayer-points-from-text';
+import { generatePrayerPointsFromText } from '@/ai/flows/generate-prayer-points-from-text';
 import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
+import { Checkbox } from './ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Form, FormControl, FormField, FormItem, FormMessage } from './ui/form';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from './ui/alert-dialog';
+
 
 type IntelligentCaptureDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
+type PrayerPoint = { point: string; bibleVerse: string; };
+
 type CaptureResult = {
   title: string;
   sourceType: 'text' | 'image' | 'audio' | 'live';
   sourceData?: string;
   notes: string;
-  prayerPoints: { point: string; bibleVerse: string; }[];
+  prayerPoints: PrayerPoint[];
 };
+
+const AddPrayersSchema = z.object({
+  categoryId: z.string().min(1, "Please select a category."),
+});
 
 export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCaptureDialogProps) {
   const { addJournalEntry } = useJournalStore();
+  const { addPrayers, categories } = usePrayerStore();
   const { toast } = useToast();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -40,15 +56,21 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   const [currentTab, setCurrentTab] = useState('text');
   const [textInput, setTextInput] = useState("");
   const [captureTitle, setCaptureTitle] = useState("");
+  const [selectedPoints, setSelectedPoints] = useState<number[]>([]);
+  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
 
   // Live recording state
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  const form = useForm<z.infer<typeof AddPrayersSchema>>({
+    resolver: zodResolver(AddPrayersSchema),
+    defaultValues: { categoryId: "" }
+  });
+
   useEffect(() => {
     if (open) {
-        // Reset state when dialog opens
         resetAllTabs();
         setCaptureTitle(`Capture - ${new Date().toLocaleString()}`);
     }
@@ -60,6 +82,12 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  useEffect(() => {
+    if (categories.length > 0 && !form.getValues('categoryId')) {
+      form.setValue('categoryId', categories[0].id);
+    }
+  }, [categories, form]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'audio') => {
     const file = e.target.files?.[0];
@@ -189,14 +217,45 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   
   const handleSaveJournalEntry = () => {
     if (!result) return;
-    
-    addJournalEntry({ ...result, title: captureTitle });
-
+    addJournalEntry({ 
+        title: captureTitle,
+        notes: result.notes,
+        sourceType: result.sourceType,
+        sourceData: result.sourceData
+    });
     toast({ title: "Journal Entry Saved", description: `"${captureTitle}" has been added to your journal.` });
-    
     resetAllTabs();
     onOpenChange(false);
   };
+  
+  const handleTogglePrayerPoint = (index: number) => {
+    setSelectedPoints(prev => 
+      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+    );
+  };
+
+  const onAddPrayersSubmit = (values: z.infer<typeof AddPrayersSchema>) => {
+    if (!result || selectedPoints.length === 0) return;
+
+    const prayersToAdd = selectedPoints.map(index => {
+      const pp = result.prayerPoints[index];
+      return {
+        title: pp.point,
+        bibleVerse: pp.bibleVerse,
+        categoryId: values.categoryId,
+      }
+    });
+
+    addPrayers(prayersToAdd);
+    toast({
+      title: `${selectedPoints.length} Prayer Point(s) Added`,
+      description: `Added to the ${categories.find(c => c.id === values.categoryId)?.name} category.`,
+    });
+    
+    setIsCategoryDialogOpen(false);
+    resetAllTabs();
+    onOpenChange(false);
+  }
 
   const resetAllTabs = () => {
     setResult(null);
@@ -205,6 +264,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     if (imageInputRef.current) imageInputRef.current.value = "";
     if (audioInputRef.current) audioInputRef.current.value = "";
     setCaptureTitle("");
+    setSelectedPoints([]);
   }
   
   const handleDialogClose = (isOpen: boolean) => {
@@ -244,23 +304,39 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
               </ScrollArea>
             </div>
             <div>
-              <h3 className="font-semibold mb-2">Prayer Points</h3>
+              <h3 className="font-semibold mb-2">Prayer Points (select to save)</h3>
               <ScrollArea className="h-32">
                 <div className="space-y-2 p-1">
                   {result.prayerPoints.length > 0 ? result.prayerPoints.map((p, index) => (
-                    <div key={index} className="flex items-start space-x-2 p-2 rounded-md border">
+                    <div 
+                      key={index} 
+                      className="flex items-start space-x-3 p-2 rounded-md border has-[:checked]:bg-secondary"
+                      onClick={() => handleTogglePrayerPoint(index)}
+                    >
+                      <Checkbox
+                        id={`pp-${index}`}
+                        checked={selectedPoints.includes(index)}
+                        className="mt-1"
+                      />
                       <div className="grid gap-1.5 leading-none">
-                        <p className="text-sm font-medium leading-none">{p.point}</p>
+                        <label htmlFor={`pp-${index}`} className="text-sm font-medium leading-none cursor-pointer">
+                          {p.point}
+                        </label>
                         <p className="text-sm text-muted-foreground">{p.bibleVerse}</p>
                       </div>
                     </div>
-                  )) : <p className="text-sm text-muted-foreground">No prayer points generated.</p>}
+                  )) : <p className="text-sm text-muted-foreground text-center py-4">No prayer points generated.</p>}
                 </div>
               </ScrollArea>
             </div>
-            <Button onClick={handleSaveJournalEntry} className="w-full">
-              <Save className="mr-2 h-4 w-4"/> Save to Journal
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button onClick={handleSaveJournalEntry} variant="outline">
+                <Save className="mr-2 h-4 w-4"/> Save Notes to Journal
+              </Button>
+               <Button onClick={() => setIsCategoryDialogOpen(true)} disabled={selectedPoints.length === 0}>
+                <Library className="mr-2 h-4 w-4"/> Add Prayers to Library ({selectedPoints.length})
+              </Button>
+            </div>
         </div>
       );
     }
@@ -323,6 +399,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleDialogClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -344,5 +421,36 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
         </Tabs>
       </DialogContent>
     </Dialog>
+    <AlertDialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Add to Prayer Library</AlertDialogTitle>
+          <AlertDialogDescription>
+            Select a category to add the {selectedPoints.length} selected prayer points to.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <Form {...form}>
+          <form id="add-prayers-form" onSubmit={form.handleSubmit(onAddPrayersSubmit)}>
+             <FormField control={form.control} name="categoryId" render={({ field }) => (
+              <FormItem>
+                <Label>Category</Label>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+          </form>
+        </Form>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction type="submit" form="add-prayers-form">Add Prayers</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

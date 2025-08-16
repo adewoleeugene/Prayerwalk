@@ -29,10 +29,14 @@ export const usePrayerStore = () => {
       }
 
       if (storedCategories) {
-        setCategories(JSON.parse(storedCategories));
+        const parsedCategories = JSON.parse(storedCategories);
+        if (parsedCategories.length > 0) {
+          setCategories(parsedCategories);
+        } else {
+          setCategories(initialCategories);
+        }
       } else {
         setCategories(initialCategories);
-        localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(initialCategories));
       }
     } catch (error) {
       console.error("Failed to load data from localStorage", error);
@@ -94,7 +98,6 @@ export const usePrayerStore = () => {
     const categoryId = category.name.toLowerCase().replace(/\s+/g, '-');
     if (categories.some(c => c.id === categoryId)) {
       console.error("Category already exists");
-      // Optionally, throw an error or handle it in the UI
       throw new Error("Category with this name already exists.");
     }
     

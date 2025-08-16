@@ -28,11 +28,12 @@ export const useJournalStore = () => {
     }
   }, [entries, isLoaded]);
 
-  const addJournalEntry = (entry: Omit<JournalEntry, 'id' | 'createdAt'>) => {
+  const addJournalEntry = (entry: Omit<JournalEntry, 'id' | 'createdAt' | 'prayerPoints'>) => {
     const newEntry: JournalEntry = {
       ...entry,
       id: new Date().toISOString() + Math.random(),
       createdAt: new Date().toISOString(),
+      prayerPoints: [], // Prayer points are now saved separately
     };
     setEntries(prev => [newEntry, ...prev]);
   };
