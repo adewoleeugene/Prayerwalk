@@ -98,9 +98,9 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
         const reader = new FileReader();
         reader.readAsDataURL(audioBlob);
         reader.onloadend = async () => {
-          const base64Audio = reader.result as string;
+          const audioDataUri = reader.result as string;
           try {
-            const result = await generatePrayerPointsFromText({ text: liveTranscript });
+            const result = await transcribeAudioToPrayerPoints({ audioDataUri });
             setResults(result.prayerPoints);
           } catch (error) {
             console.error("Transcription error:", error);
@@ -129,16 +129,9 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
               setLiveTranscript(prev => prev + transcript);
           };
           recognition.start();
-          mediaRecorderRef.current.start();
-          setIsRecording(true);
-      } else {
-        toast({
-            variant: "destructive",
-            title: "Browser Not Supported",
-            description: "Live transcription is not supported in your browser.",
-          });
-          return;
       }
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
       
     } catch (err) {
       console.error("Error accessing microphone:", err);

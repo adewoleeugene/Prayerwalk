@@ -26,15 +26,6 @@ export async function transcribeAudioToPrayerPoints(input: TranscribeAudioToPray
   return transcribeAudioToPrayerPointsFlow(input);
 }
 
-const transcribeAudioToPrayerPointsPrompt = ai.definePrompt({
-  name: 'transcribeAudioPrompt',
-  input: {schema: TranscribeAudioToPrayerPointsInputSchema},
-  output: {schema: z.object({ transcribedText: z.string() })},
-  prompt: `Transcribe the following audio recording to text:
-
-Audio: {{media url=audioDataUri}}`,
-});
-
 const transcribeAudioToPrayerPointsFlow = ai.defineFlow(
   {
     name: 'transcribeAudioToPrayerPointsFlow',
@@ -42,11 +33,16 @@ const transcribeAudioToPrayerPointsFlow = ai.defineFlow(
     outputSchema: z.custom<GeneratePrayerPointsFromTextOutput>(),
   },
   async input => {
-    const {output: transcriptionOutput} = await transcribeAudioToPrayerPointsPrompt(input);
-    if (!transcriptionOutput?.transcribedText) {
+    const {output} = await ai.generate({
+      prompt: `Transcribe the following audio recording to text: {{media url=${input.audioDataUri}}}`,
+    });
+    
+    const transcribedText = output?.text;
+
+    if (!transcribedText) {
         return { prayerPoints: [] };
     }
     
-    return await generatePrayerPointsFromText({ text: transcriptionOutput.transcribedText });
+    return await generatePrayerPointsFromText({ text: transcribedText });
   }
 );
