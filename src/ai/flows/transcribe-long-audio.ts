@@ -9,12 +9,12 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import { generatePrayerPointsFromText, type GeneratePrayerPointsFromTextOutput } from './generate-prayer-points-from-text';
-import *s as fs from 'fs';
-import *s as os from 'os';
-import *s as path from 'path';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import ffmpeg from 'fluent-ffmpeg';
-import ffmpegPath from '@ffmpeg-installer/ffmpeg';
-ffmpeg.setFfmpegPath(ffmpegPath.path);
+import { path as ffmpegPath } from '@ffmpeg-installer/ffmpeg';
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 const TranscribeLongAudioInputSchema = z.object({
   audioDataUri: z
