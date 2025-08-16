@@ -127,6 +127,32 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
       mediaRecorderRef.current.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
       };
+
+      mediaRecorderRef.current.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.readAsDataURL(audioBlob);
+        reader.onloadend = async () => {
+          const dataUri = reader.result as string;
+          setIsLoading(true);
+          setResults(null);
+          setLoadingMessage('Transcribing audio...');
+          try {
+            const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
+            if (response.prayerPoints.length > 0) {
+                setResults(response.prayerPoints);
+                setSelectedPrayers(response.prayerPoints.map((_, i) => i));
+            } else {
+                toast({ variant: "default", title: "No prayer points found." });
+            }
+          } catch (error) {
+              console.error("Error transcribing audio:", error);
+              toast({ variant: 'destructive', title: 'Transcription Failed' });
+          } finally {
+              setIsLoading(false);
+          }
+        };
+      };
       
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
@@ -145,7 +171,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                       interimTranscript += event.results[i][0].transcript;
                   }
               }
-              setLiveTranscript(finalTranscript + interimTranscript);
+              setLiveTranscript(prev => prev + finalTranscript + interimTranscript);
           };
           
           recognitionRef.current.start();
@@ -168,7 +194,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     }
   };
 
-  const handleStopRecording = () => {
+  const handleStopRecording = (process = true) => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
@@ -177,10 +203,11 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     }
     setIsRecording(false);
     
-    // Switch to text tab and populate with transcript
-    if (liveTranscript) {
+    // Logic to process the transcript is now in onstop of MediaRecorder
+    if (process && liveTranscript) {
       setCurrentTab('text');
       setTextInput(liveTranscript);
+      handleGenerateFromText();
     }
   };
   
@@ -296,7 +323,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
             <div className="space-y-4">
                 {isRecording ? (
                     <Button onClick={() => handleStopRecording()} variant="destructive" className="w-full">
-                        <Square className="mr-2 h-4 w-4" /> Stop & Process
+                        <Square className="mr-2 h-4 w-4" /> Stop Recording
                     </Button>
                 ) : (
                     <Button onClick={handleStartRecording} className="w-full">
@@ -311,7 +338,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                     placeholder={isRecording ? "Listening... Your live transcription will appear here." : "Your live transcription will appear here."}
                 />
                  <p className="text-sm text-muted-foreground">
-                    Stop the recording to generate prayer points from the transcript.
+                    When you stop recording, we'll process the audio to generate prayer points.
                 </p>
             </div>
         )
