@@ -329,7 +329,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                 </div>
               </ScrollArea>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2">
               <Button onClick={handleSaveJournalEntry} variant="outline">
                 <Save className="mr-2 h-4 w-4"/> Save Notes to Journal
               </Button>
