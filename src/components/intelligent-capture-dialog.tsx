@@ -40,6 +40,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   const [liveTranscript, setLiveTranscript] = useState("");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
+  const recognitionRef = useRef<any>(null);
 
   useEffect(() => {
     if (open && isRecording) {
@@ -118,17 +119,25 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
       
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
-          const recognition = new SpeechRecognition();
-          recognition.interimResults = true;
-          recognition.continuous = true;
-          recognition.onresult = (event) => {
-              let transcript = '';
+          recognitionRef.current = new SpeechRecognition();
+          recognitionRef.current.interimResults = true;
+          recognitionRef.current.continuous = true;
+          
+          recognitionRef.current.onresult = (event: any) => {
+              let interimTranscript = '';
+              let finalTranscript = '';
+
               for (let i = event.resultIndex; i < event.results.length; ++i) {
-                  transcript += event.results[i][0].transcript;
+                  if (event.results[i].isFinal) {
+                      finalTranscript += event.results[i][0].transcript;
+                  } else {
+                      interimTranscript += event.results[i][0].transcript;
+                  }
               }
-              setLiveTranscript(prev => prev + transcript);
+              setLiveTranscript(finalTranscript + interimTranscript);
           };
-          recognition.start();
+          
+          recognitionRef.current.start();
       }
       mediaRecorderRef.current.start();
       setIsRecording(true);
@@ -146,6 +155,9 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   const handleStopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
       mediaRecorderRef.current.stop();
+    }
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
     }
     setIsRecording(false);
   };
