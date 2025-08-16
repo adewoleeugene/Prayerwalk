@@ -17,12 +17,6 @@ import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Form, FormControl, FormField, FormItem, FormMessage } from './ui/form';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from './ui/alert-dialog';
 import { suggestCategory } from '@/ai/flows/suggest-category-flow';
 
 
@@ -41,10 +35,6 @@ type CaptureResult = {
   prayerPoints: PrayerPoint[];
 };
 
-const AddPrayersSchema = z.object({
-  categoryId: z.string().min(1, "Please select a category."),
-});
-
 export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCaptureDialogProps) {
   const { addJournalEntry } = useJournalStore();
   const { addPrayers, categories } = usePrayerStore();
@@ -60,18 +50,11 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   const [textInput, setTextInput] = useState("");
   const [captureTitle, setCaptureTitle] = useState("");
   const [selectedPoints, setSelectedPoints] = useState<number[]>([]);
-  const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
-  const [isSuggestingCategory, setIsSuggestingCategory] = useState(false);
-
+  
   // Live recording state
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-
-  const form = useForm<z.infer<typeof AddPrayersSchema>>({
-    resolver: zodResolver(AddPrayersSchema),
-    defaultValues: { categoryId: "" }
-  });
 
   useEffect(() => {
     if (open) {
@@ -221,33 +204,24 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     setIsRecording(false);
   };
   
-  const handleSaveJournalEntry = () => {
+  const handleSaveEntry = async () => {
     if (!result) return;
-    addJournalEntry({ 
-        title: captureTitle,
-        notes: editableNotes,
-        sourceType: result.sourceType,
-        sourceData: result.sourceData,
-        prayerPoints: [], // Prayer points are saved separately to the library
-    });
-    toast({ title: "Journal Entry Saved", description: `"${captureTitle}" has been added to your journal.` });
-    resetAllTabs();
-    onOpenChange(false);
-  };
-  
-  const handleTogglePrayerPoint = (index: number) => {
-    setSelectedPoints(prev => 
-      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
-    );
-  };
-
-  const handleAddPrayersClick = async () => {
-    if (!result || selectedPoints.length === 0) return;
-    setIsSuggestingCategory(true);
-    setIsCategoryDialogOpen(true);
+    setIsLoading(true);
+    setLoadingMessage('Saving entry...');
 
     try {
-        const selectedPrayerPointsText = selectedPoints.map(index => result.prayerPoints[index].point);
+      const savedPrayerPoints = selectedPoints.map(index => result.prayerPoints[index]);
+      
+      addJournalEntry({ 
+          title: captureTitle,
+          notes: editableNotes,
+          sourceType: result.sourceType,
+          sourceData: result.sourceData,
+          prayerPoints: savedPrayerPoints,
+      });
+
+      if (savedPrayerPoints.length > 0) {
+        const selectedPrayerPointsText = savedPrayerPoints.map(p => p.point);
         const availableCategories = categories.map(c => ({ id: c.id, name: c.name }));
         
         const { categoryId } = await suggestCategory({
@@ -255,42 +229,43 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
             categories: availableCategories,
         });
 
-        form.setValue('categoryId', categoryId);
-    } catch (error) {
-        console.error("Failed to suggest category:", error);
-        // Fallback to the first category if suggestion fails
-        if (categories.length > 0) {
-            form.setValue('categoryId', categories[0].id);
-        }
+        const prayersToAdd = savedPrayerPoints.map(pp => ({
+          title: pp.point,
+          bibleVerse: pp.bibleVerse,
+          categoryId: categoryId,
+          notes: result.sourceType === 'text' ? editableNotes : undefined,
+        }));
+        
+        addPrayers(prayersToAdd);
+        const categoryName = categories.find(c => c.id === categoryId)?.name || 'a category';
+        toast({
+          title: "Entry Saved!",
+          description: `Journal entry saved and ${savedPrayerPoints.length} prayer point(s) added to ${categoryName}.`,
+        });
+
+      } else {
+        toast({ title: "Journal Entry Saved", description: `"${captureTitle}" has been added to your journal.` });
+      }
+
+      resetAllTabs();
+      onOpenChange(false);
+    } catch(error) {
+       console.error("Error saving entry:", error);
+       toast({
+         variant: "destructive",
+         title: "Save Failed",
+         description: "An error occurred while saving your entry. Please try again.",
+       });
     } finally {
-        setIsSuggestingCategory(false);
+      setIsLoading(false);
     }
   };
-
-
-  const onAddPrayersSubmit = (values: z.infer<typeof AddPrayersSchema>) => {
-    if (!result || selectedPoints.length === 0) return;
-
-    const prayersToAdd = selectedPoints.map(index => {
-      const pp = result.prayerPoints[index];
-      return {
-        title: pp.point,
-        bibleVerse: pp.bibleVerse,
-        categoryId: values.categoryId,
-        notes: result.sourceType === 'text' ? editableNotes : undefined,
-      }
-    });
-
-    addPrayers(prayersToAdd);
-    toast({
-      title: `${selectedPoints.length} Prayer Point(s) Added`,
-      description: `Added to the ${categories.find(c => c.id === values.categoryId)?.name} category.`,
-    });
-    
-    setIsCategoryDialogOpen(false);
-    resetAllTabs();
-    onOpenChange(false);
-  }
+  
+  const handleTogglePrayerPoint = (index: number) => {
+    setSelectedPoints(prev => 
+      prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]
+    );
+  };
 
   const resetAllTabs = () => {
     setResult(null);
@@ -301,7 +276,6 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     setCaptureTitle("");
     setSelectedPoints([]);
     setEditableNotes('');
-    form.reset();
   }
   
   const handleDialogClose = (isOpen: boolean) => {
@@ -356,6 +330,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                       <Checkbox
                         id={`pp-${index}`}
                         checked={selectedPoints.includes(index)}
+                        onCheckedChange={() => handleTogglePrayerPoint(index)}
                         className="mt-1"
                       />
                       <div className="grid gap-1.5 leading-none">
@@ -370,11 +345,8 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
               </ScrollArea>
             </div>
             <div className="grid grid-cols-1 gap-2">
-              <Button onClick={handleSaveJournalEntry} variant="outline">
-                <Save className="mr-2 h-4 w-4"/> Save to Journal
-              </Button>
-               <Button onClick={handleAddPrayersClick} disabled={selectedPoints.length === 0}>
-                <Library className="mr-2 h-4 w-4"/> Add Selected to Library ({selectedPoints.length})
+               <Button onClick={handleSaveEntry}>
+                <Save className="mr-2 h-4 w-4"/> Save Entry
               </Button>
             </div>
         </div>
@@ -461,43 +433,6 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
         </Tabs>
       </DialogContent>
     </Dialog>
-    <AlertDialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>Add to Prayer Library</AlertDialogTitle>
-          <AlertDialogDescription>
-            Select a category to add the {selectedPoints.length} selected prayer points to. We've suggested one for you.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        {isSuggestingCategory ? (
-            <div className="flex items-center justify-center h-24">
-                <Loader2 className="h-6 w-6 animate-spin" />
-                <p className="ml-2">Suggesting category...</p>
-            </div>
-        ) : (
-            <Form {...form}>
-            <form id="add-prayers-form" onSubmit={form.handleSubmit(onAddPrayersSubmit)}>
-                <FormField control={form.control} name="categoryId" render={({ field }) => (
-                <FormItem>
-                    <Label>Category</Label>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger></FormControl>
-                    <SelectContent>
-                        {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                    </SelectContent>
-                    </Select>
-                    <FormMessage />
-                </FormItem>
-                )} />
-            </form>
-            </Form>
-        )}
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction type="submit" form="add-prayers-form" disabled={isSuggestingCategory}>Add Prayers</AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
     </>
   );
 }
