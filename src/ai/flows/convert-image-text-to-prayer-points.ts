@@ -20,6 +20,7 @@ const ConvertImageTextToPrayerPointsInputSchema = z.object({
 export type ConvertImageTextToPrayerPointsInput = z.infer<typeof ConvertImageTextToPrayerPointsInputSchema>;
 
 const ConvertImageTextToPrayerPointsOutputSchema = z.object({
+  extractedText: z.string().describe('The full text extracted from the image.'),
   prayerPoints: z.array(
     z.object({
       point: z.string().describe('A suggested prayer point.'),
@@ -37,13 +38,14 @@ const prompt = ai.definePrompt({
   name: 'convertImageTextToPrayerPointsPrompt',
   input: {schema: ConvertImageTextToPrayerPointsInputSchema},
   output: {schema: ConvertImageTextToPrayerPointsOutputSchema},
-  prompt: `You are a helpful AI that extracts prayer points and suggests relevant Bible verses from an image containing text.
+  prompt: `You are a helpful AI that extracts text from an image, and then generates prayer points and suggests relevant Bible verses from the extracted text.
 
-Analyze the text extracted from the following image and suggest prayer points and relevant Bible verses.
+First, extract all the text from the following image.
+Then, analyze the extracted text and suggest prayer points and relevant Bible verses.
 
 Image: {{media url=photoDataUri}}
 
-Format your response as a JSON object containing a list of prayer points, where each prayer point includes the point itself and a suggested Bible verse.
+Format your response as a JSON object containing the full extracted text and a list of prayer points, where each prayer point includes the point itself and a suggested Bible verse.
 `,
 });
 

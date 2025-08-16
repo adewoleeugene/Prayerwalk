@@ -38,10 +38,10 @@ const transcribeAudioToPrayerPointsFlow = ai.defineFlow(
       input: [{media: {url: input.audioDataUri}}]
     });
     
-    const transcribedText = output?.text;
+    const transcribedText = output?.text || "";
 
     if (!transcribedText) {
-        return { prayerPoints: [] };
+        return { notes: "", prayerPoints: [] };
     }
     
     return await generatePrayerPointsFromText({ text: transcribedText });

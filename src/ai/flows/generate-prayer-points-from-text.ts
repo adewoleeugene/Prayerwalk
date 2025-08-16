@@ -21,6 +21,7 @@ const PrayerPointSchema = z.object({
 });
 
 const GeneratePrayerPointsFromTextOutputSchema = z.object({
+  notes: z.string().describe("The original text provided as input."),
   prayerPoints: z.array(PrayerPointSchema).describe('A list of suggested prayer points and Bible verses.'),
 });
 export type GeneratePrayerPointsFromTextOutput = z.infer<typeof GeneratePrayerPointsFromTextOutputSchema>;
@@ -33,7 +34,7 @@ export async function generatePrayerPointsFromText(input: GeneratePrayerPointsFr
 const prompt = ai.definePrompt({
   name: 'generatePrayerPointsFromTextPrompt',
   input: {schema: GeneratePrayerPointsFromTextInputSchema},
-  output: {schema: GeneratePrayerPointsFromTextOutputSchema},
+  output: {schema: z.object({ prayerPoints: z.array(PrayerPointSchema) })},
   prompt: `You are a helpful AI that creates prayer points and suggests relevant Bible verses from a given text.
 
 Analyze the following text and suggest prayer points and relevant Bible verses.
@@ -53,9 +54,12 @@ const generatePrayerPointsFromTextFlow = ai.defineFlow(
   },
   async input => {
     if (!input.text.trim()) {
-        return { prayerPoints: [] };
+        return { notes: input.text, prayerPoints: [] };
     }
     const {output} = await prompt(input);
-    return output!;
+    return {
+        notes: input.text,
+        prayerPoints: output!.prayerPoints,
+    };
   }
 );

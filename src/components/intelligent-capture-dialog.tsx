@@ -7,46 +7,56 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { convertImageTextToPrayerPoints, ConvertImageTextToPrayerPointsOutput } from '@/ai/flows/convert-image-text-to-prayer-points';
 import { transcribeAudioToPrayerPoints, TranscribeAudioToPrayerPointsOutput } from '@/ai/flows/transcribe-audio-to-prayer-points';
 import { useToast } from '@/hooks/use-toast';
-import { Checkbox } from './ui/checkbox';
-import { usePrayerStore } from '@/hooks/use-prayer-store';
-import { Loader2, Mic, Upload, Square, NotebookText } from 'lucide-react';
+import { useJournalStore } from '@/hooks/use-journal-store';
+import { Loader2, Mic, Upload, Square, NotebookText, Save } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { generatePrayerPointsFromText, GeneratePrayerPointsFromTextOutput } from '@/ai/flows/generate-prayer-points-from-text';
 import { Textarea } from './ui/textarea';
+import { Input } from './ui/input';
+import { Label } from './ui/label';
 
 type IntelligentCaptureDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 };
 
-type PrayerPoint = {
-    point: string;
-    bibleVerse: string;
+type CaptureResult = {
+  title: string;
+  sourceType: 'text' | 'image' | 'audio' | 'live';
+  sourceData?: string;
+  notes: string;
+  prayerPoints: { point: string; bibleVerse: string; }[];
 };
 
 export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCaptureDialogProps) {
-  const { addPrayers, categories } = usePrayerStore();
+  const { addJournalEntry } = useJournalStore();
   const { toast } = useToast();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Analyzing...');
-  const [results, setResults] = useState<PrayerPoint[] | null>(null);
-  const [selectedPrayers, setSelectedPrayers] = useState<number[]>([]);
+  const [result, setResult] = useState<CaptureResult | null>(null);
   const [currentTab, setCurrentTab] = useState('text');
   const [textInput, setTextInput] = useState("");
+  const [captureTitle, setCaptureTitle] = useState("");
 
   // Live recording state
   const [isRecording, setIsRecording] = useState(false);
-  const [liveTranscript, setLiveTranscript] = useState("");
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
-  const recognitionRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (open) {
+        // Reset state when dialog opens
+        resetAllTabs();
+        setCaptureTitle(`Capture - ${new Date().toLocaleString()}`);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (open && isRecording) {
-      handleStopRecording(false);
+      handleStopRecording();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -56,30 +66,33 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     if (!file) return;
 
     setIsLoading(true);
-    setResults(null);
+    setResult(null);
 
     const reader = new FileReader();
     reader.readAsDataURL(file);
     reader.onloadend = async () => {
       const dataUri = reader.result as string;
       try {
-        let response: ConvertImageTextToPrayerPointsOutput | TranscribeAudioToPrayerPointsOutput;
         if (type === 'image') {
           setLoadingMessage('Analyzing image...');
-          response = await convertImageTextToPrayerPoints({ photoDataUri: dataUri });
+          const response = await convertImageTextToPrayerPoints({ photoDataUri: dataUri });
+          setResult({
+            title: captureTitle,
+            sourceType: 'image',
+            sourceData: dataUri,
+            notes: response.extractedText,
+            prayerPoints: response.prayerPoints,
+          });
         } else {
           setLoadingMessage('Transcribing audio...');
-          toast({
-            title: "Audio Processing",
-            description: "For best results, please use audio files under 1 minute.",
+          const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
+          setResult({
+            title: captureTitle,
+            sourceType: 'audio',
+            sourceData: dataUri,
+            notes: response.notes,
+            prayerPoints: response.prayerPoints,
           });
-          response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
-        }
-        if (response.prayerPoints.length > 0) {
-            setResults(response.prayerPoints);
-            setSelectedPrayers(response.prayerPoints.map((_, i) => i));
-        } else {
-            toast({ variant: "default", title: "No prayer points found." });
         }
       } catch (error) {
         console.error(`Error processing ${type}:`, error);
@@ -100,16 +113,16 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
           return;
       }
       setIsLoading(true);
-      setResults(null);
+      setResult(null);
       setLoadingMessage('Generating prayer points...');
       try {
           const response = await generatePrayerPointsFromText({ text: textInput });
-          if (response.prayerPoints.length > 0) {
-            setResults(response.prayerPoints);
-            setSelectedPrayers(response.prayerPoints.map((_, i) => i));
-          } else {
-            toast({ variant: "default", title: "No prayer points found." });
-          }
+          setResult({
+            title: captureTitle,
+            sourceType: 'text',
+            notes: response.notes,
+            prayerPoints: response.prayerPoints,
+          });
       } catch (error) {
           console.error("Error generating from text:", error);
           toast({ variant: 'destructive', title: 'Generation Failed' });
@@ -122,7 +135,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
-      mediaRecorderRef.current = new MediaRecorder(stream);
+      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
       
       mediaRecorderRef.current.ondataavailable = (event) => {
         audioChunksRef.current.push(event.data);
@@ -135,16 +148,17 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
         reader.onloadend = async () => {
           const dataUri = reader.result as string;
           setIsLoading(true);
-          setResults(null);
+          setResult(null);
           setLoadingMessage('Transcribing audio...');
           try {
             const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
-            if (response.prayerPoints.length > 0) {
-                setResults(response.prayerPoints);
-                setSelectedPrayers(response.prayerPoints.map((_, i) => i));
-            } else {
-                toast({ variant: "default", title: "No prayer points found." });
-            }
+            setResult({
+              title: captureTitle,
+              sourceType: 'live',
+              sourceData: dataUri,
+              notes: response.notes,
+              prayerPoints: response.prayerPoints
+            });
           } catch (error) {
               console.error("Error transcribing audio:", error);
               toast({ variant: 'destructive', title: 'Transcription Failed' });
@@ -154,36 +168,8 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
         };
       };
       
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SpeechRecognition) {
-          recognitionRef.current = new SpeechRecognition();
-          recognitionRef.current.interimResults = true;
-          recognitionRef.current.continuous = true;
-          setLiveTranscript('');
-          
-          recognitionRef.current.onresult = (event: any) => {
-              let finalTranscript = '';
-              let interimTranscript = '';
-              for (let i = event.resultIndex; i < event.results.length; ++i) {
-                  if (event.results[i].isFinal) {
-                      finalTranscript += event.results[i][0].transcript;
-                  } else {
-                      interimTranscript += event.results[i][0].transcript;
-                  }
-              }
-              setLiveTranscript(prev => prev + finalTranscript + interimTranscript);
-          };
-          
-          recognitionRef.current.start();
-          mediaRecorderRef.current.start();
-          setIsRecording(true);
-      } else {
-        toast({
-            variant: "destructive",
-            title: "Speech Recognition not supported",
-            description: "Your browser does not support live transcription.",
-          });
-      }
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
     } catch (err) {
       console.error("Error accessing microphone:", err);
       toast({
@@ -194,47 +180,31 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     }
   };
 
-  const handleStopRecording = (process = true) => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
+  const handleStopRecording = () => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();
     }
     setIsRecording(false);
-    
-    // Logic to process the transcript is now in onstop of MediaRecorder
-    if (process && liveTranscript) {
-      setCurrentTab('text');
-      setTextInput(liveTranscript);
-      handleGenerateFromText();
-    }
   };
   
-  const handleAddSelectedPrayers = () => {
-    if (!results || !categories.length) return;
-    const defaultCategoryId = categories.find(c => c.id === 'personal')?.id || categories[0].id;
+  const handleSaveJournalEntry = () => {
+    if (!result) return;
+    
+    addJournalEntry({ ...result, title: captureTitle });
 
-    const prayersToAdd = results
-      .filter((_, index) => selectedPrayers.includes(index))
-      .map(p => ({ title: p.point, bibleVerse: p.bibleVerse, categoryId: defaultCategoryId }));
-
-    if (prayersToAdd.length > 0) {
-        addPrayers(prayersToAdd);
-        toast({ title: "Prayers Added", description: `${prayersToAdd.length} prayer points added to your library.` });
-    }
+    toast({ title: "Journal Entry Saved", description: `"${captureTitle}" has been added to your journal.` });
+    
     resetAllTabs();
     onOpenChange(false);
   };
 
   const resetAllTabs = () => {
-    setResults(null);
-    setSelectedPrayers([]);
+    setResult(null);
     setIsLoading(false);
+    setTextInput("");
     if (imageInputRef.current) imageInputRef.current.value = "";
     if (audioInputRef.current) audioInputRef.current.value = "";
-    setTextInput("");
-    setLiveTranscript("");
+    setCaptureTitle("");
   }
   
   const handleDialogClose = (isOpen: boolean) => {
@@ -247,38 +217,50 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   const handleTabChange = (value: string) => {
     resetAllTabs();
     setCurrentTab(value);
+    setCaptureTitle(`Capture - ${new Date().toLocaleString()}`);
   };
 
   const renderContent = () => {
     if (isLoading) {
       return (
-        <div className="flex flex-col items-center justify-center h-[300px]">
+        <div className="flex flex-col items-center justify-center h-[350px]">
           <Loader2 className="h-8 w-8 animate-spin text-primary"/>
           <p className="mt-2">{loadingMessage}</p>
         </div>
       );
     }
 
-    if (results) {
+    if (result) {
       return (
         <div className="space-y-4">
-          <p>Select the prayer points to add:</p>
-          <ScrollArea className="h-64">
-            <div className="space-y-2 p-1">
-              {results.map((p, index) => (
-                <div key={index} className="flex items-start space-x-2 p-2 rounded-md border">
-                  <Checkbox id={`prayer-${index}`} checked={selectedPrayers.includes(index)} onCheckedChange={(checked) => setSelectedPrayers(prev => checked ? [...prev, index] : prev.filter(i => i !== index))} />
-                  <div className="grid gap-1.5 leading-none">
-                    <label htmlFor={`prayer-${index}`} className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">{p.point}</label>
-                    <p className="text-sm text-muted-foreground">{p.bibleVerse}</p>
-                  </div>
-                </div>
-              ))}
+            <div className="space-y-2">
+                <Label htmlFor="capture-title">Title</Label>
+                <Input id="capture-title" value={captureTitle} onChange={(e) => setCaptureTitle(e.target.value)} />
             </div>
-          </ScrollArea>
-          <Button onClick={handleAddSelectedPrayers} disabled={selectedPrayers.length === 0}>
-            Add {selectedPrayers.length} Selected Prayers
-          </Button>
+            <div>
+              <h3 className="font-semibold mb-2">Notes</h3>
+              <ScrollArea className="h-24 rounded-md border p-2 text-sm">
+                {result.notes || <span className="text-muted-foreground">No notes generated.</span>}
+              </ScrollArea>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2">Prayer Points</h3>
+              <ScrollArea className="h-32">
+                <div className="space-y-2 p-1">
+                  {result.prayerPoints.length > 0 ? result.prayerPoints.map((p, index) => (
+                    <div key={index} className="flex items-start space-x-2 p-2 rounded-md border">
+                      <div className="grid gap-1.5 leading-none">
+                        <p className="text-sm font-medium leading-none">{p.point}</p>
+                        <p className="text-sm text-muted-foreground">{p.bibleVerse}</p>
+                      </div>
+                    </div>
+                  )) : <p className="text-sm text-muted-foreground">No prayer points generated.</p>}
+                </div>
+              </ScrollArea>
+            </div>
+            <Button onClick={handleSaveJournalEntry} className="w-full">
+              <Save className="mr-2 h-4 w-4"/> Save to Journal
+            </Button>
         </div>
       );
     }
@@ -290,7 +272,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                     id="text-input"
                     value={textInput}
                     onChange={(e) => setTextInput(e.target.value)}
-                    rows={8}
+                    rows={12}
                     placeholder="Type or paste your notes, thoughts, or a transcribed sermon here..."
                 />
                  <Button onClick={handleGenerateFromText} className="w-full">Generate Prayer Points</Button>
@@ -300,7 +282,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
 
     if (currentTab === 'image') {
         return (
-            <div className="text-center space-y-4 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center h-[300px]">
+            <div className="text-center space-y-4 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center h-[350px]">
                 <p>Upload an image of a slide or notes.</p>
                 <Button onClick={() => imageInputRef.current?.click()}><Upload className="mr-2 h-4 w-4"/> Upload Image</Button>
                 <input type="file" accept="image/*" ref={imageInputRef} className="hidden" onChange={(e) => handleFileChange(e, 'image')} />
@@ -310,7 +292,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
 
     if (currentTab === 'audio') {
         return (
-            <div className="text-center space-y-4 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center h-[300px]">
+            <div className="text-center space-y-4 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center h-[350px]">
                 <p>Upload a sermon or meeting recording.</p>
                 <Button onClick={() => audioInputRef.current?.click()}><Mic className="mr-2 h-4 w-4"/> Upload Audio</Button>
                 <input type="file" accept="audio/*" ref={audioInputRef} className="hidden" onChange={(e) => handleFileChange(e, 'audio')} />
@@ -320,25 +302,18 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
 
     if (currentTab === 'live') {
         return (
-            <div className="space-y-4">
-                {isRecording ? (
-                    <Button onClick={() => handleStopRecording()} variant="destructive" className="w-full">
-                        <Square className="mr-2 h-4 w-4" /> Stop Recording
-                    </Button>
-                ) : (
-                    <Button onClick={handleStartRecording} className="w-full">
-                        <Mic className="mr-2 h-4 w-4" /> Start Recording
-                    </Button>
-                )}
-                 <Textarea
-                    id="live-transcription"
-                    value={liveTranscript}
-                    readOnly
-                    rows={8}
-                    placeholder={isRecording ? "Listening... Your live transcription will appear here." : "Your live transcription will appear here."}
-                />
+            <div className="text-center space-y-4 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center h-[350px]">
+                <p className="text-lg font-medium">{isRecording ? "Recording in progress..." : "Start recording to capture live audio"}</p>
+                <Button 
+                    onClick={isRecording ? handleStopRecording : handleStartRecording} 
+                    variant={isRecording ? "destructive" : "default"}
+                    className="w-24 h-24 rounded-full"
+                    size="icon"
+                >
+                    {isRecording ? <Square className="h-10 w-10" /> : <Mic className="h-10 w-10" />}
+                </Button>
                  <p className="text-sm text-muted-foreground">
-                    When you stop recording, we'll process the audio to generate prayer points.
+                    {isRecording ? "Click the square to stop." : "We'll process the audio when you stop."}
                 </p>
             </div>
         )
@@ -352,7 +327,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Intelligent Capture</DialogTitle>
-          <DialogDescription>Generate prayer points from text, an image, audio file, or live recording.</DialogDescription>
+          <DialogDescription>Save a new journal entry from text, an image, audio file, or live recording.</DialogDescription>
         </DialogHeader>
         <Tabs defaultValue="text" className="w-full" onValueChange={handleTabChange} value={currentTab}>
           <TabsList className="grid w-full grid-cols-4">
@@ -362,27 +337,12 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
             <TabsTrigger value="live">Live</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="text" className="mt-4 min-h-[300px]">
+          <div className="mt-4 min-h-[380px]">
             {renderContent()}
-          </TabsContent>
-          <TabsContent value="image" className="mt-4 min-h-[300px]">
-            {renderContent()}
-          </TabsContent>
-          <TabsContent value="audio" className="mt-4 min-h-[300px]">
-            {renderContent()}
-          </TabsContent>
-          <TabsContent value="live" className="mt-4 min-h-[300px]">
-            {renderContent()}
-          </TabsContent>
+          </div>
+
         </Tabs>
       </DialogContent>
     </Dialog>
   );
-}
-
-declare global {
-    interface Window {
-        SpeechRecognition: any;
-        webkitSpeechRecognition: any;
-    }
 }
