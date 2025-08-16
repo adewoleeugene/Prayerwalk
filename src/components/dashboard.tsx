@@ -46,7 +46,7 @@ export function Dashboard() {
             ) : (
               <div className="space-y-4">
                 <Card
-                  className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border-dashed border-2 border-primary"
+                  className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border-dashed border-2 border-primary bg-transparent"
                   onClick={() => setIsCategoryDialogOpen(true)}
                 >
                   <CardContent className="p-4 flex items-center justify-center gap-4 text-primary">
@@ -77,7 +77,6 @@ export function Dashboard() {
                       icon={category.icon}
                       count={prayers.filter(p => p.categoryId === category.id && p.status === 'active').length}
                       onClick={() => setSelectedView(category.id)}
-                      variant="primary"
                     />
                   ))}
                 </div>
