@@ -35,12 +35,12 @@ export function Dashboard() {
           <div className="p-4 md:p-6">
             {!isLoaded ? (
               <div className="space-y-4">
-                 <Skeleton className="h-24 w-full" />
+                 <Skeleton className="h-12 w-full" />
                  <div className="grid grid-cols-2 gap-4">
-                    <Skeleton className="h-24 w-full" />
-                    <Skeleton className="h-24 w-full" />
-                    <Skeleton className="h-24 w-full" />
-                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-28 w-full" />
+                    <Skeleton className="h-28 w-full" />
+                    <Skeleton className="h-28 w-full" />
+                    <Skeleton className="h-28 w-full" />
                 </div>
               </div>
             ) : (
@@ -61,14 +61,12 @@ export function Dashboard() {
                     icon="Sun"
                     count={allActiveCount}
                     onClick={() => setSelectedView('all')}
-                    variant="primary"
                   />
                   <CategoryCard
                     name="Answered"
                     icon="CheckCircle"
                     count={answeredCount}
                     onClick={() => setSelectedView('answered')}
-                    variant="primary"
                   />
                   {categories.map(category => (
                     <CategoryCard

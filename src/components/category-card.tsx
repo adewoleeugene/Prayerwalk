@@ -18,32 +18,37 @@ export function CategoryCard({ name, icon, count, onClick, variant = 'secondary'
     primary: "shadow-lg bg-primary text-primary-foreground",
     secondary: "shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer"
   };
-  
-  const iconContainerClasses = {
-    primary: "bg-primary-foreground/20",
-    secondary: "bg-primary/10"
-  }
-  
-  const iconClasses = {
-    primary: "text-primary-foreground",
-    secondary: "text-primary"
+
+  if (variant === 'primary') {
+    return (
+        <Card
+            className={cardClasses.primary}
+            onClick={onClick}
+        >
+            <CardContent className="p-4 flex flex-col items-start justify-between h-full">
+                <div className="flex justify-between w-full items-start">
+                    <div className="p-2 bg-primary-foreground/20 rounded-lg">
+                        <Icon className="h-6 w-6 text-primary-foreground" />
+                    </div>
+                    <span className="text-2xl font-bold">{count}</span>
+                </div>
+                <div className="mt-4">
+                    <h3 className="text-lg font-semibold">{name}</h3>
+                </div>
+            </CardContent>
+        </Card>
+    );
   }
 
   return (
     <Card
-      className={cardClasses[variant]}
+      className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer bg-secondary"
       onClick={onClick}
     >
-      <CardContent className="p-4 flex flex-col items-start justify-between h-full">
-        <div className="flex justify-between w-full items-start">
-            <div className={`p-2 rounded-lg ${iconContainerClasses[variant]}`}>
-                <Icon className={`h-6 w-6 ${iconClasses[variant]}`} />
-            </div>
-            <span className="text-2xl font-bold">{count}</span>
-        </div>
-        <div className="mt-4">
-            <h3 className="text-lg font-semibold">{name}</h3>
-        </div>
+      <CardContent className="p-4 flex flex-col items-center justify-center h-28 gap-2">
+        <Icon className="h-8 w-8 text-secondary-foreground" />
+        <h3 className="text-md font-semibold text-center text-secondary-foreground">{name}</h3>
+        {count > 0 && <span className="absolute top-2 right-2 text-xs font-bold bg-primary text-primary-foreground h-5 w-5 flex items-center justify-center rounded-full">{count}</span>}
       </CardContent>
     </Card>
   );
