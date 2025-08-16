@@ -41,38 +41,42 @@ export function Dashboard() {
                   <Skeleton className="h-24 w-full" />
               </div>
             ) : (
-              <div className="grid grid-cols-2 gap-4">
-                <CategoryCard
-                  name="All Prayers"
-                  icon="Sun"
-                  count={allActiveCount}
-                  onClick={() => setSelectedView('all')}
-                  variant="primary"
-                />
-                <CategoryCard
-                  name="Answered"
-                  icon="CheckCircle"
-                  count={answeredCount}
-                  onClick={() => setSelectedView('answered')}
-                />
-                {categories.map(category => (
-                  <CategoryCard
-                    key={category.id}
-                    name={category.name}
-                    icon={category.icon}
-                    count={prayers.filter(p => p.categoryId === category.id && p.status === 'active').length}
-                    onClick={() => setSelectedView(category.id)}
-                  />
-                ))}
+              <div className="space-y-4">
                 <Card
                   className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border-dashed border-2 hover:border-primary"
                   onClick={() => setIsCategoryDialogOpen(true)}
                 >
-                  <CardContent className="p-4 flex flex-col items-center justify-center h-full text-primary">
-                    <PlusCircle className="h-8 w-8" />
-                    <h3 className="text-lg font-semibold mt-2">Add Category</h3>
+                  <CardContent className="p-4 flex items-center justify-center gap-4 text-primary">
+                    <PlusCircle className="h-6 w-6" />
+                    <h3 className="text-lg font-semibold">Add New Category</h3>
                   </CardContent>
                 </Card>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <CategoryCard
+                    name="All Prayers"
+                    icon="Sun"
+                    count={allActiveCount}
+                    onClick={() => setSelectedView('all')}
+                    variant="primary"
+                  />
+                  <CategoryCard
+                    name="Answered"
+                    icon="CheckCircle"
+                    count={answeredCount}
+                    onClick={() => setSelectedView('answered')}
+                    variant="primary"
+                  />
+                  {categories.map(category => (
+                    <CategoryCard
+                      key={category.id}
+                      name={category.name}
+                      icon={category.icon}
+                      count={prayers.filter(p => p.categoryId === category.id && p.status === 'active').length}
+                      onClick={() => setSelectedView(category.id)}
+                    />
+                  ))}
+                </div>
               </div>
             )}
           </div>
