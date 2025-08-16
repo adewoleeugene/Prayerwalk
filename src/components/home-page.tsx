@@ -3,8 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { FolderPlus, Footprints, Sparkles } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { FolderPlus, Footprints, Sparkles, Activity } from 'lucide-react';
 import { getDailyVerse, DailyVerse } from '@/ai/flows/get-daily-verse';
 import { Skeleton } from './ui/skeleton';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
@@ -13,6 +13,8 @@ import { useRouter } from 'next/navigation';
 import { AddCategoryDialog } from './add-category-dialog';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import type { View } from '@/app/page';
+import { analyzePrayerActivity, AnalyzePrayerActivityOutput } from '@/ai/flows/analyze-prayer-activity';
+import { PrayerChart } from './prayer-chart';
 
 type HomePageProps = {
   onCaptureClick: () => void;
@@ -21,12 +23,14 @@ type HomePageProps = {
 
 export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const { user } = useAuth();
-  const { prayers, isLoaded } = usePrayerStore();
+  const { prayers, categories, isLoaded } = usePrayerStore();
   const router = useRouter();
   const [greeting, setGreeting] = useState('');
   const [dailyVerse, setDailyVerse] = useState<DailyVerse | null>(null);
   const [isLoadingVerse, setIsLoadingVerse] = useState(true);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [analysis, setAnalysis] = useState<AnalyzePrayerActivityOutput | null>(null);
+  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(true);
 
   useEffect(() => {
     const hours = new Date().getHours();
@@ -39,8 +43,22 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
       .catch(console.error)
       .finally(() => setIsLoadingVerse(false));
   }, []);
+  
+  useEffect(() => {
+    if(isLoaded && prayers.length > 0) {
+      const recentPrayers = prayers.filter(p => p.status === 'active').slice(0, 10);
+      const answeredPrayers = prayers.filter(p => p.status === 'answered').slice(0, 10);
 
-  const recentPrayers = prayers.slice(0, 3);
+      analyzePrayerActivity({ recentPrayers, answeredPrayers, categories })
+        .then(setAnalysis)
+        .catch(console.error)
+        .finally(() => setIsLoadingAnalysis(false));
+    } else if (isLoaded) {
+      setIsLoadingAnalysis(false);
+    }
+  }, [isLoaded, prayers, categories]);
+
+  const recentPrayersForDisplay = prayers.slice(0, 3);
   const userName = user?.displayName || user?.email?.split('@')[0] || 'friend';
   const userInitial = (user?.displayName || user?.email || 'U').charAt(0).toUpperCase();
 
@@ -94,12 +112,42 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
             </Button>
           </div>
           
+          {/* Recent Activity Analysis */}
+          <Card className="shadow-md">
+             <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Activity />
+                  Recent Activity
+                </CardTitle>
+                <CardDescription>An AI-powered summary of your recent prayer life.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoadingAnalysis ? (
+                 <div className="space-y-2">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-32 w-full mt-2" />
+                </div>
+              ) : analysis && (analysis.summary || analysis.categoryDistribution.length > 0) ? (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground italic">"{analysis.summary}"</p>
+                  {analysis.categoryDistribution.length > 0 && <PrayerChart data={analysis.categoryDistribution} />}
+                </div>
+              ) : (
+                 <div className="text-center text-muted-foreground py-8">
+                  <p>No recent activity to analyze.</p>
+                  <p>Start by adding some prayer points.</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          
           {/* Recent Prayer Points */}
           <div>
             <h2 className="text-lg font-bold font-headline mb-2">Recent Prayer Points</h2>
-            {isLoaded && recentPrayers.length > 0 ? (
+            {isLoaded && recentPrayersForDisplay.length > 0 ? (
               <div className="space-y-4">
-                {recentPrayers.map(prayer => <PrayerCard key={prayer.id} prayer={prayer} />)}
+                {recentPrayersForDisplay.map(prayer => <PrayerCard key={prayer.id} prayer={prayer} />)}
               </div>
             ) : (
               <div className="text-center text-muted-foreground py-8">
