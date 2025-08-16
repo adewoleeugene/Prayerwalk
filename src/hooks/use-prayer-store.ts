@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Category, Prayer } from '@/lib/types';
+import { suggestIcon } from '@/ai/flows/suggest-icon-flow';
 
 const PRAYERS_STORAGE_KEY = 'prayersmart-prayers';
 const CATEGORIES_STORAGE_KEY = 'prayersmart-categories';
@@ -89,15 +90,21 @@ export const usePrayerStore = () => {
     }));
   };
 
-  const addCategory = (category: Omit<Category, 'id'>) => {
+  const addCategory = async (category: Omit<Category, 'id' | 'icon'>) => {
+    const categoryId = category.name.toLowerCase().replace(/\s+/g, '-');
+    if (categories.some(c => c.id === categoryId)) {
+      console.error("Category already exists");
+      // Optionally, throw an error or handle it in the UI
+      throw new Error("Category with this name already exists.");
+    }
+    
+    const { iconName } = await suggestIcon({ categoryName: category.name });
+
     const newCategory: Category = {
       ...category,
-      id: category.name.toLowerCase().replace(/\s+/g, '-'),
+      id: categoryId,
+      icon: iconName,
     };
-    if (categories.some(c => c.id === newCategory.id)) {
-      console.error("Category already exists");
-      return;
-    }
     setCategories(prev => [...prev, newCategory]);
   };
 

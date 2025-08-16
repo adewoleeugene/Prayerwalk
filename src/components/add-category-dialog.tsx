@@ -9,13 +9,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { usePrayerStore } from '@/hooks/use-prayer-store';
-import { iconMap } from './icons';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { ScrollArea } from './ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
 const categorySchema = z.object({
   name: z.string().min(2, { message: "Category name must be at least 2 characters." }),
-  icon: z.string().min(1, { message: "Please select an icon." }),
 });
 
 type AddCategoryDialogProps = {
@@ -25,18 +23,36 @@ type AddCategoryDialogProps = {
 
 export function AddCategoryDialog({ open, onOpenChange }: AddCategoryDialogProps) {
   const { addCategory } = usePrayerStore();
+  const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
   const form = useForm<z.infer<typeof categorySchema>>({
     resolver: zodResolver(categorySchema),
     defaultValues: {
       name: "",
-      icon: "",
     },
   });
 
-  function onSubmit(values: z.infer<typeof categorySchema>) {
-    addCategory(values);
-    form.reset();
-    onOpenChange(false);
+  async function onSubmit(values: z.infer<typeof categorySchema>) {
+    setIsSubmitting(true);
+    try {
+      await addCategory(values);
+      form.reset();
+      onOpenChange(false);
+      toast({
+        title: "Category Added",
+        description: `The "${values.name}" category has been created.`,
+      })
+    } catch (error) {
+      console.error("Failed to add category:", error);
+      toast({
+        variant: "destructive",
+        title: "Failed to create category",
+        description: "An error occurred while suggesting an icon. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -45,7 +61,7 @@ export function AddCategoryDialog({ open, onOpenChange }: AddCategoryDialogProps
         <DialogHeader>
           <DialogTitle>Add New Category</DialogTitle>
           <DialogDescription>
-            Create a new category to organize your prayer points.
+            Create a new category to organize your prayer points. An icon will be automatically suggested.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -63,40 +79,11 @@ export function AddCategoryDialog({ open, onOpenChange }: AddCategoryDialogProps
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="icon"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Icon</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an icon" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <ScrollArea className="h-48">
-                      {Object.keys(iconMap).filter(key => key !== 'Default').map((iconName) => {
-                          const Icon = iconMap[iconName];
-                          return (
-                            <SelectItem key={iconName} value={iconName}>
-                              <div className="flex items-center gap-2">
-                                <Icon className="h-4 w-4" />
-                                <span>{iconName}</span>
-                              </div>
-                            </SelectItem>
-                          );
-                      })}
-                      </ScrollArea>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <DialogFooter>
-              <Button type="submit">Create Category</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Create Category
+              </Button>
             </DialogFooter>
           </form>
         </Form>
