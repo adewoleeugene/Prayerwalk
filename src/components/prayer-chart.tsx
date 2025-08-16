@@ -11,7 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { ChartTooltipContent } from "@/components/ui/chart"
+import { ChartContainer, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart"
 
 interface PrayerChartProps {
   data: {
@@ -21,10 +21,22 @@ interface PrayerChartProps {
   }[];
 }
 
+const chartConfig = {
+  active: {
+    label: "Active",
+    color: "hsl(var(--primary))",
+  },
+  answered: {
+    label: "Answered",
+    color: "hsl(var(--chart-2))",
+  },
+} satisfies ChartConfig
+
 export function PrayerChart({ data }: PrayerChartProps) {
   return (
     <div className="h-[250px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+      <ChartContainer config={chartConfig} className="w-full h-full">
+        <ResponsiveContainer>
             <BarChart data={data} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis 
@@ -36,12 +48,13 @@ export function PrayerChart({ data }: PrayerChartProps) {
                 />
                 <Tooltip 
                     cursor={{fill: 'hsl(var(--muted))'}}
-                    content={<ChartTooltipContent />} 
+                    content={<ChartTooltipContent hideLabel />} 
                 />
-                <Bar dataKey="active" stackId="a" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="answered" stackId="a" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="active" stackId="a" fill="var(--color-active)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="answered" stackId="a" fill="var(--color-answered)" radius={[4, 4, 0, 0]} />
             </BarChart>
         </ResponsiveContainer>
+      </ChartContainer>
     </div>
   )
 }
