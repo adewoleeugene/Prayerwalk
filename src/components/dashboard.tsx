@@ -47,6 +47,7 @@ export function Dashboard() {
                   icon="Sun"
                   count={allActiveCount}
                   onClick={() => setSelectedView('all')}
+                  variant="primary"
                 />
                 <CategoryCard
                   name="Answered"
