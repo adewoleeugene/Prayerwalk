@@ -19,6 +19,11 @@ export function Dashboard() {
   const answeredCount = prayers.filter(p => p.status === 'answered').length;
   const allActiveCount = prayers.filter(p => p.status === 'active').length;
 
+  const defaultCategoryIds = ['family', 'work', 'personal', 'study'];
+  const hasUserCreatedCategories = categories.some(c => !defaultCategoryIds.includes(c.id));
+  const displayedCategories = hasUserCreatedCategories ? categories : [];
+
+
   if (selectedView) {
     return <PrayerList view={selectedView} onBack={() => setSelectedView(null)} />;
   }
@@ -68,7 +73,7 @@ export function Dashboard() {
                     count={answeredCount}
                     onClick={() => setSelectedView('answered')}
                   />
-                  {categories.map(category => (
+                  {displayedCategories.map(category => (
                     <CategoryCard
                       key={category.id}
                       name={category.name}
