@@ -23,6 +23,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from './ui/alert-dialog';
+import { suggestCategory } from '@/ai/flows/suggest-category-flow';
 
 
 type IntelligentCaptureDialogProps = {
@@ -60,6 +61,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   const [captureTitle, setCaptureTitle] = useState("");
   const [selectedPoints, setSelectedPoints] = useState<number[]>([]);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [isSuggestingCategory, setIsSuggestingCategory] = useState(false);
 
   // Live recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -84,12 +86,6 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-
-  useEffect(() => {
-    if (categories.length > 0 && !form.getValues('categoryId')) {
-      form.setValue('categoryId', categories[0].id);
-    }
-  }, [categories, form]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'audio') => {
     const file = e.target.files?.[0];
@@ -245,6 +241,33 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     );
   };
 
+  const handleAddPrayersClick = async () => {
+    if (!result || selectedPoints.length === 0) return;
+    setIsSuggestingCategory(true);
+    setIsCategoryDialogOpen(true);
+
+    try {
+        const selectedPrayerPointsText = selectedPoints.map(index => result.prayerPoints[index].point);
+        const availableCategories = categories.map(c => ({ id: c.id, name: c.name }));
+        
+        const { categoryId } = await suggestCategory({
+            prayerPoints: selectedPrayerPointsText,
+            categories: availableCategories,
+        });
+
+        form.setValue('categoryId', categoryId);
+    } catch (error) {
+        console.error("Failed to suggest category:", error);
+        // Fallback to the first category if suggestion fails
+        if (categories.length > 0) {
+            form.setValue('categoryId', categories[0].id);
+        }
+    } finally {
+        setIsSuggestingCategory(false);
+    }
+  };
+
+
   const onAddPrayersSubmit = (values: z.infer<typeof AddPrayersSchema>) => {
     if (!result || selectedPoints.length === 0) return;
 
@@ -278,6 +301,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     setCaptureTitle("");
     setSelectedPoints([]);
     setEditableNotes('');
+    form.reset();
   }
   
   const handleDialogClose = (isOpen: boolean) => {
@@ -349,7 +373,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
               <Button onClick={handleSaveJournalEntry} variant="outline">
                 <Save className="mr-2 h-4 w-4"/> Save to Journal
               </Button>
-               <Button onClick={() => setIsCategoryDialogOpen(true)} disabled={selectedPoints.length === 0}>
+               <Button onClick={handleAddPrayersClick} disabled={selectedPoints.length === 0}>
                 <Library className="mr-2 h-4 w-4"/> Add Selected to Library ({selectedPoints.length})
               </Button>
             </div>
@@ -442,28 +466,35 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
         <AlertDialogHeader>
           <AlertDialogTitle>Add to Prayer Library</AlertDialogTitle>
           <AlertDialogDescription>
-            Select a category to add the {selectedPoints.length} selected prayer points to.
+            Select a category to add the {selectedPoints.length} selected prayer points to. We've suggested one for you.
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <Form {...form}>
-          <form id="add-prayers-form" onSubmit={form.handleSubmit(onAddPrayersSubmit)}>
-             <FormField control={form.control} name="categoryId" render={({ field }) => (
-              <FormItem>
-                <Label>Category</Label>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )} />
-          </form>
-        </Form>
+        {isSuggestingCategory ? (
+            <div className="flex items-center justify-center h-24">
+                <Loader2 className="h-6 w-6 animate-spin" />
+                <p className="ml-2">Suggesting category...</p>
+            </div>
+        ) : (
+            <Form {...form}>
+            <form id="add-prayers-form" onSubmit={form.handleSubmit(onAddPrayersSubmit)}>
+                <FormField control={form.control} name="categoryId" render={({ field }) => (
+                <FormItem>
+                    <Label>Category</Label>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl><SelectTrigger><SelectValue placeholder="Select a category" /></SelectTrigger></FormControl>
+                    <SelectContent>
+                        {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                    </Select>
+                    <FormMessage />
+                </FormItem>
+                )} />
+            </form>
+            </Form>
+        )}
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction type="submit" form="add-prayers-form">Add Prayers</AlertDialogAction>
+          <AlertDialogAction type="submit" form="add-prayers-form" disabled={isSuggestingCategory}>Add Prayers</AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

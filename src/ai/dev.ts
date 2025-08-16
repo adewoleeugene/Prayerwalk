@@ -6,3 +6,4 @@ import '@/ai/flows/transcribe-audio-to-prayer-points.ts';
 import '@/ai/flows/get-daily-verse.ts';
 import '@/ai/flows/generate-prayer-points-from-text.ts';
 import '@/ai/flows/suggest-icon-flow.ts';
+import '@/ai/flows/suggest-category-flow.ts';
