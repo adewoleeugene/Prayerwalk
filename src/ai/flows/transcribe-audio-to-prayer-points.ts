@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview A flow that transcribes audio and generates prayer points.
+ * @fileOverview A flow that transcribes short audio and generates prayer points.
  *
  * - transcribeAudioToPrayerPoints - A function that handles the audio transcription and prayer point generation.
  * - TranscribeAudioToPrayerPointsInput - The input type for the transcribeAudioToPrayerPoints function.
@@ -34,7 +34,8 @@ const transcribeAudioToPrayerPointsFlow = ai.defineFlow(
   },
   async input => {
     const {output} = await ai.generate({
-      prompt: `Transcribe the following audio recording to text: {{media url=${input.audioDataUri}}}`,
+      prompt: `Transcribe the following audio recording to text:`,
+      input: [{media: {url: input.audioDataUri}}]
     });
     
     const transcribedText = output?.text;

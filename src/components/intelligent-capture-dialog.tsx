@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { convertImageTextToPrayerPoints, ConvertImageTextToPrayerPointsOutput } from '@/ai/flows/convert-image-text-to-prayer-points';
-import { transcribeAudioToPrayerPoints, TranscribeAudioToPrayerPointsOutput } from '@/ai/flows/transcribe-audio-to-prayer-points';
+import { transcribeLongAudio, TranscribeLongAudioOutput } from '@/ai/flows/transcribe-long-audio';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from './ui/checkbox';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
@@ -13,6 +13,7 @@ import { Loader2, Mic, Upload, Square, NotebookText } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { generatePrayerPointsFromText } from '@/ai/flows/generate-prayer-points-from-text';
 import { Textarea } from './ui/textarea';
+import { transcribeAudioToPrayerPoints } from '@/ai/flows/transcribe-audio-to-prayer-points';
 
 type IntelligentCaptureDialogProps = {
   open: boolean;
@@ -31,6 +32,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   const audioInputRef = useRef<HTMLInputElement>(null);
   
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('Analyzing...');
   const [results, setResults] = useState<PrayerPoint[] | null>(null);
   const [selectedPrayers, setSelectedPrayers] = useState<number[]>([]);
   const [currentTab, setCurrentTab] = useState('text');
@@ -45,7 +47,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
 
   useEffect(() => {
     if (open && isRecording) {
-      handleStopRecording();
+      handleStopRecording(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -62,11 +64,13 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     reader.onloadend = async () => {
       const dataUri = reader.result as string;
       try {
-        let response: ConvertImageTextToPrayerPointsOutput | TranscribeAudioToPrayerPointsOutput;
+        let response: ConvertImageTextToPrayerPointsOutput | TranscribeLongAudioOutput;
         if (type === 'image') {
+          setLoadingMessage('Analyzing image...');
           response = await convertImageTextToPrayerPoints({ photoDataUri: dataUri });
         } else {
-          response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
+          setLoadingMessage('Transcribing audio, this may take a moment...');
+          response = await transcribeLongAudio({ audioDataUri: dataUri });
         }
         if (response.prayerPoints.length > 0) {
             setResults(response.prayerPoints);
@@ -79,7 +83,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
         toast({
           variant: "destructive",
           title: `Failed to process ${type}`,
-          description: "Please try another file.",
+          description: "An error occurred. Please try another file.",
         });
       } finally {
         setIsLoading(false);
@@ -94,6 +98,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
       }
       setIsLoading(true);
       setResults(null);
+      setLoadingMessage('Generating prayer points...');
       try {
           const response = await generatePrayerPointsFromText({ text: textInput });
           if (response.prayerPoints.length > 0) {
@@ -114,6 +119,11 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      
+      mediaRecorderRef.current.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
       
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
@@ -124,13 +134,19 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
           
           recognitionRef.current.onresult = (event: any) => {
               let finalTranscript = '';
+              let interimTranscript = '';
               for (let i = event.resultIndex; i < event.results.length; ++i) {
-                  finalTranscript += event.results[i][0].transcript;
+                  if (event.results[i].isFinal) {
+                      finalTranscript += event.results[i][0].transcript;
+                  } else {
+                      interimTranscript += event.results[i][0].transcript;
+                  }
               }
-              setLiveTranscript(finalTranscript);
+              setLiveTranscript(finalTranscript + interimTranscript);
           };
           
           recognitionRef.current.start();
+          mediaRecorderRef.current.start();
           setIsRecording(true);
       } else {
         toast({
@@ -149,15 +165,41 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     }
   };
 
-  const handleStopRecording = () => {
+  const handleStopRecording = (shouldGenerate = true) => {
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
-    setIsRecording(false);
-    if (liveTranscript) {
-        setTextInput(liveTranscript);
-        setCurrentTab('text');
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current.onstop = () => {
+            const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+            const reader = new FileReader();
+            reader.readAsDataURL(audioBlob);
+            reader.onloadend = async () => {
+                const dataUri = reader.result as string;
+                if (shouldGenerate) {
+                    setIsLoading(true);
+                    setResults(null);
+                    setLoadingMessage('Transcribing audio...');
+                    try {
+                        const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
+                        if (response.prayerPoints.length > 0) {
+                            setResults(response.prayerPoints);
+                            setSelectedPrayers(response.prayerPoints.map((_, i) => i));
+                        } else {
+                            toast({ variant: "default", title: "No prayer points found." });
+                        }
+                    } catch (error) {
+                        console.error(`Error processing audio:`, error);
+                        toast({ variant: "destructive", title: `Failed to process audio`, description: "Please try again." });
+                    } finally {
+                        setIsLoading(false);
+                    }
+                }
+            }
+        };
     }
+    setIsRecording(false);
   };
   
   const handleAddSelectedPrayers = () => {
@@ -203,7 +245,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
       return (
         <div className="flex flex-col items-center justify-center h-[300px]">
           <Loader2 className="h-8 w-8 animate-spin text-primary"/>
-          <p className="mt-2">Analyzing...</p>
+          <p className="mt-2">{loadingMessage}</p>
         </div>
       );
     }
@@ -260,7 +302,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     if (currentTab === 'audio') {
         return (
             <div className="text-center space-y-4 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center h-[300px]">
-                <p>Upload an audio recording of a sermon.</p>
+                <p>Upload a sermon or meeting recording.</p>
                 <Button onClick={() => audioInputRef.current?.click()}><Mic className="mr-2 h-4 w-4"/> Upload Audio</Button>
                 <input type="file" accept="audio/*" ref={audioInputRef} className="hidden" onChange={(e) => handleFileChange(e, 'audio')} />
             </div>
@@ -271,7 +313,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
         return (
             <div className="space-y-4">
                 {isRecording ? (
-                    <Button onClick={handleStopRecording} variant="destructive" className="w-full">
+                    <Button onClick={() => handleStopRecording(true)} variant="destructive" className="w-full">
                         <Square className="mr-2 h-4 w-4" /> Stop & Generate
                     </Button>
                 ) : (
