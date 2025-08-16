@@ -28,12 +28,11 @@ export const useJournalStore = () => {
     }
   }, [entries, isLoaded]);
 
-  const addJournalEntry = (entry: Omit<JournalEntry, 'id' | 'createdAt' | 'prayerPoints'>) => {
+  const addJournalEntry = (entry: Omit<JournalEntry, 'id' | 'createdAt'>) => {
     const newEntry: JournalEntry = {
       ...entry,
       id: new Date().toISOString() + Math.random(),
       createdAt: new Date().toISOString(),
-      prayerPoints: [], // Prayer points are now saved separately
     };
     setEntries(prev => [newEntry, ...prev]);
   };
@@ -41,11 +40,18 @@ export const useJournalStore = () => {
   const deleteJournalEntry = (id: string) => {
     setEntries(prev => prev.filter(entry => entry.id !== id));
   };
+  
+  const updateJournalEntryNotes = (id: string, notes: string) => {
+    setEntries(prev => prev.map(entry => 
+      entry.id === id ? { ...entry, notes } : entry
+    ));
+  };
 
   return {
     entries,
     isLoaded,
     addJournalEntry,
     deleteJournalEntry,
+    updateJournalEntryNotes,
   };
 };

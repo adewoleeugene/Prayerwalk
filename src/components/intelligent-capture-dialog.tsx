@@ -111,6 +111,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
             notes: response.extractedText,
             prayerPoints: response.prayerPoints,
           });
+          setSelectedPoints(response.prayerPoints.map((_,i) => i));
         } else {
           setLoadingMessage('Transcribing audio...');
           const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
@@ -121,6 +122,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
             notes: response.notes,
             prayerPoints: response.prayerPoints,
           });
+          setSelectedPoints(response.prayerPoints.map((_,i) => i));
         }
       } catch (error) {
         console.error(`Error processing ${type}:`, error);
@@ -151,6 +153,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
             notes: response.notes,
             prayerPoints: response.prayerPoints,
           });
+          setSelectedPoints(response.prayerPoints.map((_,i) => i));
       } catch (error) {
           console.error("Error generating from text:", error);
           toast({ variant: 'destructive', title: 'Generation Failed' });
@@ -187,6 +190,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
               notes: response.notes,
               prayerPoints: response.prayerPoints
             });
+            setSelectedPoints(response.prayerPoints.map((_,i) => i));
           } catch (error) {
               console.error("Error transcribing audio:", error);
               toast({ variant: 'destructive', title: 'Transcription Failed' });
@@ -217,11 +221,13 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   
   const handleSaveJournalEntry = () => {
     if (!result) return;
+    const pointsToSave = result.prayerPoints.filter((_, index) => selectedPoints.includes(index));
     addJournalEntry({ 
         title: captureTitle,
         notes: result.notes,
         sourceType: result.sourceType,
-        sourceData: result.sourceData
+        sourceData: result.sourceData,
+        prayerPoints: pointsToSave,
     });
     toast({ title: "Journal Entry Saved", description: `"${captureTitle}" has been added to your journal.` });
     resetAllTabs();
@@ -243,6 +249,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
         title: pp.point,
         bibleVerse: pp.bibleVerse,
         categoryId: values.categoryId,
+        notes: result.sourceType === 'text' ? result.notes : undefined,
       }
     });
 
@@ -310,7 +317,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                   {result.prayerPoints.length > 0 ? result.prayerPoints.map((p, index) => (
                     <div 
                       key={index} 
-                      className="flex items-start space-x-3 p-2 rounded-md border has-[:checked]:bg-secondary"
+                      className="flex items-start space-x-3 p-2 rounded-md border has-[:checked]:bg-secondary cursor-pointer"
                       onClick={() => handleTogglePrayerPoint(index)}
                     >
                       <Checkbox
@@ -331,10 +338,10 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
             </div>
             <div className="grid grid-cols-1 gap-2">
               <Button onClick={handleSaveJournalEntry} variant="outline">
-                <Save className="mr-2 h-4 w-4"/> Save Notes to Journal
+                <Save className="mr-2 h-4 w-4"/> Save to Journal
               </Button>
                <Button onClick={() => setIsCategoryDialogOpen(true)} disabled={selectedPoints.length === 0}>
-                <Library className="mr-2 h-4 w-4"/> Add Prayers to Library ({selectedPoints.length})
+                <Library className="mr-2 h-4 w-4"/> Add Selected to Library ({selectedPoints.length})
               </Button>
             </div>
         </div>
