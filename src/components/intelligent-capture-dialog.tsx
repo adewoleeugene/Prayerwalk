@@ -9,7 +9,7 @@ import { transcribeAudioToPrayerPoints, TranscribeAudioToPrayerPointsOutput } fr
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from './ui/checkbox';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
-import { Loader2, Mic, Upload, Square } from 'lucide-react';
+import { Loader2, Mic, Upload, Square, NotebookText } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { generatePrayerPointsFromText } from '@/ai/flows/generate-prayer-points-from-text';
 import { Textarea } from './ui/textarea';
@@ -33,7 +33,8 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<PrayerPoint[] | null>(null);
   const [selectedPrayers, setSelectedPrayers] = useState<number[]>([]);
-  const [currentTab, setCurrentTab] = useState('image');
+  const [currentTab, setCurrentTab] = useState('text');
+  const [textInput, setTextInput] = useState("");
 
   // Live recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -67,7 +68,12 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
         } else {
           response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
         }
-        setResults(response.prayerPoints);
+        if (response.prayerPoints.length > 0) {
+            setResults(response.prayerPoints);
+            setSelectedPrayers(response.prayerPoints.map((_, i) => i));
+        } else {
+            toast({ variant: "default", title: "No prayer points found." });
+        }
       } catch (error) {
         console.error(`Error processing ${type}:`, error);
         toast({
@@ -81,67 +87,58 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     };
   };
 
+  const handleGenerateFromText = async () => {
+      if (!textInput.trim()) {
+          toast({ variant: 'destructive', title: 'Text is empty', description: 'Please enter some text to generate prayer points.' });
+          return;
+      }
+      setIsLoading(true);
+      setResults(null);
+      try {
+          const response = await generatePrayerPointsFromText({ text: textInput });
+          if (response.prayerPoints.length > 0) {
+            setResults(response.prayerPoints);
+            setSelectedPrayers(response.prayerPoints.map((_, i) => i));
+          } else {
+            toast({ variant: "default", title: "No prayer points found." });
+          }
+      } catch (error) {
+          console.error("Error generating from text:", error);
+          toast({ variant: 'destructive', title: 'Generation Failed' });
+      } finally {
+          setIsLoading(false);
+      }
+  }
+
   const handleStartRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
-      mediaRecorderRef.current.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-      mediaRecorderRef.current.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        if (audioBlob.size === 0) return;
-        
-        setIsLoading(true);
-        const reader = new FileReader();
-        reader.readAsDataURL(audioBlob);
-        reader.onloadend = async () => {
-          const audioDataUri = reader.result as string;
-          try {
-            const result = await transcribeAudioToPrayerPoints({ audioDataUri });
-            setResults(result.prayerPoints);
-          } catch (error) {
-            console.error("Transcription error:", error);
-            toast({
-              variant: "destructive",
-              title: "Generation Failed",
-              description: "Could not generate prayer points from the recording.",
-            });
-          } finally {
-            setIsLoading(false);
-          }
-        };
-        stream.getTracks().forEach(track => track.stop());
-      };
       
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRecognition) {
           recognitionRef.current = new SpeechRecognition();
           recognitionRef.current.interimResults = true;
           recognitionRef.current.continuous = true;
+          setLiveTranscript('');
           
           recognitionRef.current.onresult = (event: any) => {
-              let interimTranscript = '';
               let finalTranscript = '';
-
               for (let i = event.resultIndex; i < event.results.length; ++i) {
-                  if (event.results[i].isFinal) {
-                      finalTranscript += event.results[i][0].transcript;
-                  } else {
-                      interimTranscript += event.results[i][0].transcript;
-                  }
+                  finalTranscript += event.results[i][0].transcript;
               }
-              setLiveTranscript(finalTranscript + interimTranscript);
+              setLiveTranscript(finalTranscript);
           };
           
           recognitionRef.current.start();
+          setIsRecording(true);
+      } else {
+        toast({
+            variant: "destructive",
+            title: "Speech Recognition not supported",
+            description: "Your browser does not support live transcription.",
+          });
       }
-      mediaRecorderRef.current.start();
-      setIsRecording(true);
-      
     } catch (err) {
       console.error("Error accessing microphone:", err);
       toast({
@@ -153,18 +150,19 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   };
 
   const handleStopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-      mediaRecorderRef.current.stop();
-    }
     if (recognitionRef.current) {
       recognitionRef.current.stop();
     }
     setIsRecording(false);
+    if (liveTranscript) {
+        setTextInput(liveTranscript);
+        setCurrentTab('text');
+    }
   };
   
   const handleAddSelectedPrayers = () => {
     if (!results || !categories.length) return;
-    const defaultCategoryId = categories[0].id;
+    const defaultCategoryId = categories.find(c => c.id === 'personal')?.id || categories[0].id;
 
     const prayersToAdd = results
       .filter((_, index) => selectedPrayers.includes(index))
@@ -184,10 +182,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     setIsLoading(false);
     if (imageInputRef.current) imageInputRef.current.value = "";
     if (audioInputRef.current) audioInputRef.current.value = "";
-    
-    if(isRecording) {
-        handleStopRecording();
-    }
+    setTextInput("");
     setLiveTranscript("");
   }
   
@@ -237,6 +232,21 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
       );
     }
     
+    if (currentTab === 'text') {
+        return (
+            <div className="space-y-4">
+                <Textarea
+                    id="text-input"
+                    value={textInput}
+                    onChange={(e) => setTextInput(e.target.value)}
+                    rows={8}
+                    placeholder="Type or paste your notes, thoughts, or a transcribed sermon here..."
+                />
+                 <Button onClick={handleGenerateFromText} className="w-full">Generate Prayer Points</Button>
+            </div>
+        )
+    }
+
     if (currentTab === 'image') {
         return (
             <div className="text-center space-y-4 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center h-[300px]">
@@ -291,15 +301,19 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Intelligent Capture</DialogTitle>
-          <DialogDescription>Generate prayer points from an image, audio file, or live recording.</DialogDescription>
+          <DialogDescription>Generate prayer points from text, an image, audio file, or live recording.</DialogDescription>
         </DialogHeader>
-        <Tabs defaultValue="image" className="w-full" onValueChange={handleTabChange} value={currentTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="image">From Image</TabsTrigger>
-            <TabsTrigger value="audio">From Audio</TabsTrigger>
+        <Tabs defaultValue="text" className="w-full" onValueChange={handleTabChange} value={currentTab}>
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="text"><NotebookText className="h-4 w-4 mr-1"/>Text</TabsTrigger>
+            <TabsTrigger value="image">Image</TabsTrigger>
+            <TabsTrigger value="audio">Audio</TabsTrigger>
             <TabsTrigger value="live">Live</TabsTrigger>
           </TabsList>
           
+          <TabsContent value="text" className="mt-4 min-h-[300px]">
+            {renderContent()}
+          </TabsContent>
           <TabsContent value="image" className="mt-4 min-h-[300px]">
             {renderContent()}
           </TabsContent>

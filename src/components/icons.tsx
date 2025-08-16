@@ -1,4 +1,4 @@
-import { BookOpen, Briefcase, Heart, Users, CheckCircle, PlusCircle, LucideIcon, Folder, Home, Plus, MoreVertical, Sun, FolderPlus, LogOut, Sparkles, Notebook, Settings, Library, User, Mic, Square } from 'lucide-react';
+import { BookOpen, Briefcase, Heart, Users, CheckCircle, PlusCircle, LucideIcon, Folder, Home, Plus, MoreVertical, Sun, FolderPlus, LogOut, Sparkles, Notebook, Settings, Library, User, Mic, Square, NotebookText } from 'lucide-react';
 
 export const iconMap: { [key: string]: LucideIcon } = {
   BookOpen,
@@ -21,6 +21,7 @@ export const iconMap: { [key: string]: LucideIcon } = {
   User,
   Mic,
   Square,
+  NotebookText,
   Default: Heart,
 };
 
