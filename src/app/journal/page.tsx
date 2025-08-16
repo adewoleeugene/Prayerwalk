@@ -14,9 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { JournalEntry } from '@/lib/types';
-import { getIcon } from '@/components/icons';
 
 function JournalEntryCard({ entry }: { entry: JournalEntry }) {
   const { deleteJournalEntry, updateJournalEntryNotes } = useJournalStore();
@@ -113,20 +111,7 @@ function JournalEntryCard({ entry }: { entry: JournalEntry }) {
 
 export function JournalPage() {
   const { entries, isLoaded: isJournalLoaded } = useJournalStore();
-  const { categories, isLoaded: isCategoriesLoaded } = usePrayerStore();
-
-  const isLoaded = isJournalLoaded && isCategoriesLoaded;
-
-  const groupedEntries = entries.reduce((acc, entry) => {
-    const categoryId = entry.categoryId || 'uncategorized';
-    if (!acc[categoryId]) {
-      acc[categoryId] = [];
-    }
-    acc[categoryId].push(entry);
-    return acc;
-  }, {} as Record<string, typeof entries>);
-
-
+  
   return (
     <>
       <header className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
@@ -135,34 +120,18 @@ export function JournalPage() {
 
       <ScrollArea className="h-[calc(100vh-129px)] md:h-[calc(100vh-65px)]">
         <main className="p-4 md:p-6">
-          {!isLoaded ? (
+          {!isJournalLoaded ? (
              <div className="space-y-4">
                 <Skeleton className="h-12 w-full" />
                 <Skeleton className="h-28 w-full" />
                 <Skeleton className="h-28 w-full" />
             </div>
-          ) : Object.keys(groupedEntries).length > 0 ? (
-            <Accordion type="multiple" className="w-full space-y-4" defaultValue={Object.keys(groupedEntries)}>
-              {Object.entries(groupedEntries).map(([categoryId, entriesForCategory]) => {
-                 const category = categories.find(c => c.id === categoryId);
-                 const CategoryIcon = getIcon(category?.icon || 'Folder');
-                 return (
-                 <AccordionItem value={categoryId} key={categoryId}>
-                    <AccordionTrigger>
-                        <div className="flex items-center gap-3">
-                            <CategoryIcon className="h-5 w-5 text-muted-foreground"/>
-                            <h2 className="text-lg font-semibold">{category?.name || 'Uncategorized'}</h2>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                        {entriesForCategory.map(entry => (
-                           <JournalEntryCard key={entry.id} entry={entry} />
-                        ))}
-                    </AccordionContent>
-                 </AccordionItem>
-                 )
-              })}
-            </Accordion>
+          ) : entries.length > 0 ? (
+            <div className="space-y-4">
+              {entries.map(entry => (
+                <JournalEntryCard key={entry.id} entry={entry} />
+              ))}
+            </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] text-center text-muted-foreground">
               <p className="text-lg font-medium">Your Journal is Empty</p>
