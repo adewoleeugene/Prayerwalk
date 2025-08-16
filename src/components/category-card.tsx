@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,7 +49,6 @@ export function CategoryCard({ name, icon, count, onClick, variant = 'secondary'
       <CardContent className="p-4 flex flex-col items-center justify-center h-28 gap-2">
         <Icon className="h-8 w-8 text-secondary-foreground" />
         <h3 className="text-md font-semibold text-center text-secondary-foreground">{name}</h3>
-        {count > 0 && <span className="absolute top-2 right-2 text-xs font-bold bg-primary text-primary-foreground h-5 w-5 flex items-center justify-center rounded-full">{count}</span>}
       </CardContent>
     </Card>
   );

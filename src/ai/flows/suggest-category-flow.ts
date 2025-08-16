@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Suggests a category for a list of prayer points.
@@ -29,19 +30,19 @@ const prompt = ai.definePrompt({
   name: 'suggestCategoryPrompt',
   input: {schema: SuggestCategoryInputSchema},
   output: {schema: SuggestCategoryOutputSchema},
-  prompt: `You are an expert at organizing information. Your task is to suggest the most relevant category for a given list of prayer points.
+  prompt: `You are an expert at organizing information. Your task is to suggest the most relevant category for a given list of prayer points by analyzing keywords in the text.
 
 The available categories are:
 {{#each categories}}
 - {{name}} (id: {{id}})
 {{/each}}
 
-Analyze the following prayer points:
+Analyze the keywords in the following prayer points:
 {{#each prayerPoints}}
 - {{this}}
 {{/each}}
 
-Based on the content of the prayer points, choose the single most appropriate category ID from the list provided.
+Based on the keywords and content of the prayer points, choose the single most appropriate category ID from the list provided.
 
 Return only the category ID as a JSON object.`,
 });
