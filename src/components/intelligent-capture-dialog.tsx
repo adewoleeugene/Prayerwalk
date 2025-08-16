@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -53,6 +54,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Analyzing...');
   const [result, setResult] = useState<CaptureResult | null>(null);
+  const [editableNotes, setEditableNotes] = useState('');
   const [currentTab, setCurrentTab] = useState('text');
   const [textInput, setTextInput] = useState("");
   const [captureTitle, setCaptureTitle] = useState("");
@@ -111,7 +113,8 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
             notes: response.extractedText,
             prayerPoints: response.prayerPoints,
           });
-          setSelectedPoints(response.prayerPoints.map((_,i) => i));
+          setEditableNotes(response.extractedText);
+          setSelectedPoints([]);
         } else {
           setLoadingMessage('Transcribing audio...');
           const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
@@ -122,7 +125,8 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
             notes: response.notes,
             prayerPoints: response.prayerPoints,
           });
-          setSelectedPoints(response.prayerPoints.map((_,i) => i));
+          setEditableNotes(response.notes);
+          setSelectedPoints([]);
         }
       } catch (error) {
         console.error(`Error processing ${type}:`, error);
@@ -153,7 +157,8 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
             notes: response.notes,
             prayerPoints: response.prayerPoints,
           });
-          setSelectedPoints(response.prayerPoints.map((_,i) => i));
+          setEditableNotes(response.notes);
+          setSelectedPoints([]);
       } catch (error) {
           console.error("Error generating from text:", error);
           toast({ variant: 'destructive', title: 'Generation Failed' });
@@ -190,7 +195,8 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
               notes: response.notes,
               prayerPoints: response.prayerPoints
             });
-            setSelectedPoints(response.prayerPoints.map((_,i) => i));
+            setEditableNotes(response.notes);
+            setSelectedPoints([]);
           } catch (error) {
               console.error("Error transcribing audio:", error);
               toast({ variant: 'destructive', title: 'Transcription Failed' });
@@ -221,13 +227,12 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   
   const handleSaveJournalEntry = () => {
     if (!result) return;
-    const pointsToSave = result.prayerPoints.filter((_, index) => selectedPoints.includes(index));
     addJournalEntry({ 
         title: captureTitle,
-        notes: result.notes,
+        notes: editableNotes,
         sourceType: result.sourceType,
         sourceData: result.sourceData,
-        prayerPoints: pointsToSave,
+        prayerPoints: [], // Prayer points are saved separately to the library
     });
     toast({ title: "Journal Entry Saved", description: `"${captureTitle}" has been added to your journal.` });
     resetAllTabs();
@@ -249,7 +254,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
         title: pp.point,
         bibleVerse: pp.bibleVerse,
         categoryId: values.categoryId,
-        notes: result.sourceType === 'text' ? result.notes : undefined,
+        notes: result.sourceType === 'text' ? editableNotes : undefined,
       }
     });
 
@@ -272,6 +277,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     if (audioInputRef.current) audioInputRef.current.value = "";
     setCaptureTitle("");
     setSelectedPoints([]);
+    setEditableNotes('');
   }
   
   const handleDialogClose = (isOpen: boolean) => {
@@ -305,10 +311,13 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                 <Input id="capture-title" value={captureTitle} onChange={(e) => setCaptureTitle(e.target.value)} />
             </div>
             <div>
-              <h3 className="font-semibold mb-2">Notes</h3>
-              <ScrollArea className="h-24 rounded-md border p-2 text-sm">
-                {result.notes || <span className="text-muted-foreground">No notes generated.</span>}
-              </ScrollArea>
+              <h3 className="font-semibold mb-2">Notes (Editable)</h3>
+              <Textarea 
+                value={editableNotes}
+                onChange={(e) => setEditableNotes(e.target.value)}
+                rows={5}
+                className="text-sm"
+              />
             </div>
             <div>
               <h3 className="font-semibold mb-2">Prayer Points (select to save)</h3>
