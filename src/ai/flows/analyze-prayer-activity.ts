@@ -26,14 +26,14 @@ const CategorySchema = z.object({
     icon: z.string(),
 });
 
-export const AnalyzePrayerActivityInputSchema = z.object({
+const AnalyzePrayerActivityInputSchema = z.object({
   recentPrayers: z.array(PrayerSchema).describe('A list of recently added prayers.'),
   answeredPrayers: z.array(PrayerSchema).describe('A list of recently answered prayers.'),
   categories: z.array(CategorySchema).describe('A list of all available categories.'),
 });
 export type AnalyzePrayerActivityInput = z.infer<typeof AnalyzePrayerActivityInputSchema>;
 
-export const AnalyzePrayerActivityOutputSchema = z.object({
+const AnalyzePrayerActivityOutputSchema = z.object({
   summary: z.string().describe('A thoughtful summary of recent prayer activity, including themes and encouragement.'),
   categoryDistribution: z.array(z.object({
     name: z.string(),
