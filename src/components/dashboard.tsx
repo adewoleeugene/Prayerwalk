@@ -54,7 +54,7 @@ export function Dashboard() {
                     <h3 className="text-lg font-semibold">Add New Category</h3>
                   </CardContent>
                 </Card>
-
+                
                 <div className="grid grid-cols-2 gap-4">
                   <CategoryCard
                     name="All Prayers"
