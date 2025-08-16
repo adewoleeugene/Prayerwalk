@@ -79,7 +79,7 @@ export function JournalPage() {
                           <AccordionItem value="notes">
                             <AccordionTrigger>View Notes</AccordionTrigger>
                             <AccordionContent>
-                               <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                               <div className="prose prose-sm dark:prose-invert max-w-none">
                                 {entry.notes || "No notes were captured."}
                                </div>
                             </AccordionContent>
