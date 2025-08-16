@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -10,6 +11,7 @@ import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import Image from 'next/image';
 
 export function JournalPage() {
   const { entries, isLoaded, deleteJournalEntry } = useJournalStore();
@@ -76,14 +78,24 @@ export function JournalPage() {
                       </CardHeader>
                       <CardContent>
                         <Accordion type="single" collapsible className="w-full">
-                          <AccordionItem value="notes">
-                            <AccordionTrigger>View Notes</AccordionTrigger>
-                            <AccordionContent>
-                               <div className="prose prose-sm dark:prose-invert max-w-none">
-                                {entry.notes || "No notes were captured."}
-                               </div>
-                            </AccordionContent>
-                          </AccordionItem>
+                           {entry.sourceData && (
+                            <AccordionItem value="source">
+                              <AccordionTrigger>View Source</AccordionTrigger>
+                              <AccordionContent>
+                                {entry.sourceType === 'image' && entry.sourceData && (
+                                  <Image src={entry.sourceData} alt="Captured image" width={400} height={300} className="rounded-md object-contain" />
+                                )}
+                                {(entry.sourceType === 'audio' || entry.sourceType === 'live') && entry.sourceData && (
+                                  <audio controls src={entry.sourceData} className="w-full" />
+                                )}
+                                {entry.sourceType === 'text' && (
+                                   <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                                    {entry.notes || "No source text."}
+                                   </div>
+                                )}
+                              </AccordionContent>
+                            </AccordionItem>
+                           )}
                           <AccordionItem value="prayer-points">
                             <AccordionTrigger>View Prayer Points ({entry.prayerPoints.length})</AccordionTrigger>
                             <AccordionContent>
