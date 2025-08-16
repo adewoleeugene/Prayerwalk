@@ -78,8 +78,10 @@ export function JournalPage() {
                         <Accordion type="single" collapsible className="w-full">
                           <AccordionItem value="notes">
                             <AccordionTrigger>View Notes</AccordionTrigger>
-                            <AccordionContent className="text-sm whitespace-pre-wrap">
-                              {entry.notes || "No notes were captured."}
+                            <AccordionContent>
+                               <div className="prose prose-sm dark:prose-invert max-w-none whitespace-pre-wrap">
+                                {entry.notes || "No notes were captured."}
+                               </div>
                             </AccordionContent>
                           </AccordionItem>
                           <AccordionItem value="prayer-points">
