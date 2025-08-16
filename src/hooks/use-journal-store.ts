@@ -37,9 +37,14 @@ export const useJournalStore = () => {
     setEntries(prev => [newEntry, ...prev]);
   };
 
+  const deleteJournalEntry = (id: string) => {
+    setEntries(prev => prev.filter(entry => entry.id !== id));
+  };
+
   return {
     entries,
     isLoaded,
     addJournalEntry,
+    deleteJournalEntry,
   };
 };
