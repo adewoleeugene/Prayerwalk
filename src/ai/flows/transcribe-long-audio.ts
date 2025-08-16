@@ -13,7 +13,9 @@ import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
 import ffmpeg from 'fluent-ffmpeg';
-import { path as ffmpegPath } from '@ffmpeg-installer/ffmpeg';
+
+// Correctly import the path to the ffmpeg binary
+const ffmpegPath = require('@ffmpeg-installer/ffmpeg').path;
 ffmpeg.setFfmpegPath(ffmpegPath);
 
 const TranscribeLongAudioInputSchema = z.object({
@@ -41,7 +43,7 @@ const transcribeLongAudioFlow = ai.defineFlow(
     const { buffer, mimeType } = dataUriToBuffer(audioDataUri);
     
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'audio-chunks-'));
-    const tempFilePath = path.join(tempDir, `input.${mimeType.split('/')[1]}`);
+    const tempFilePath = path.join(tempDir, `input.${mimeType.split('/')[1] || 'tmp'}`);
     fs.writeFileSync(tempFilePath, buffer);
 
     try {
