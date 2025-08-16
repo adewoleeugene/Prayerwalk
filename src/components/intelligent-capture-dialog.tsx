@@ -10,7 +10,7 @@ import { transcribeAudioToPrayerPoints } from '@/ai/flows/transcribe-audio-to-pr
 import { useToast } from '@/hooks/use-toast';
 import { useJournalStore } from '@/hooks/use-journal-store';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
-import { Loader2, Mic, Upload, Square, NotebookText, Save, Library } from 'lucide-react';
+import { Loader2, Mic, Upload, Square, NotebookText, Save } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { generatePrayerPointsFromText } from '@/ai/flows/generate-prayer-points-from-text';
 import { Textarea } from './ui/textarea';
@@ -212,22 +212,16 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     try {
       const savedPrayerPoints = selectedPoints.map(index => result.prayerPoints[index]);
       
-      addJournalEntry({ 
-          title: captureTitle,
-          notes: editableNotes,
-          sourceType: result.sourceType,
-          sourceData: result.sourceData,
-          prayerPoints: savedPrayerPoints,
-      });
-
+      let categoryId = categories[0]?.id || 'personal'; // Default category
       if (savedPrayerPoints.length > 0) {
         const selectedPrayerPointsText = savedPrayerPoints.map(p => p.point);
         const availableCategories = categories.map(c => ({ id: c.id, name: c.name }));
         
-        const { categoryId } = await suggestCategory({
+        const suggestion = await suggestCategory({
             prayerPoints: selectedPrayerPointsText,
             categories: availableCategories,
         });
+        categoryId = suggestion.categoryId;
 
         const prayersToAdd = savedPrayerPoints.map(pp => ({
           title: pp.point,
@@ -237,15 +231,23 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
         }));
         
         addPrayers(prayersToAdd);
-        const categoryName = categories.find(c => c.id === categoryId)?.name || 'a category';
-        toast({
-          title: "Entry Saved!",
-          description: `Journal entry saved and ${savedPrayerPoints.length} prayer point(s) added to ${categoryName}.`,
-        });
-
-      } else {
-        toast({ title: "Journal Entry Saved", description: `"${captureTitle}" has been added to your journal.` });
       }
+      
+      addJournalEntry({ 
+          title: captureTitle,
+          notes: editableNotes,
+          sourceType: result.sourceType,
+          sourceData: result.sourceData,
+          prayerPoints: savedPrayerPoints,
+          categoryId: categoryId,
+      });
+      
+      const categoryName = categories.find(c => c.id === categoryId)?.name || 'a category';
+      toast({
+        title: "Entry Saved!",
+        description: `Journal entry and ${savedPrayerPoints.length} prayer point(s) added to ${categoryName}.`,
+      });
+
 
       resetAllTabs();
       onOpenChange(false);

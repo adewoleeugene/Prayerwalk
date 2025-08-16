@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useJournalStore } from '@/hooks/use-journal-store';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,11 +14,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
+import { usePrayerStore } from '@/hooks/use-prayer-store';
+import { JournalEntry } from '@/lib/types';
+import { getIcon } from '@/components/icons';
 
-function JournalEntryCard({ entry }: { entry: ReturnType<typeof useJournalStore>['entries'][0] }) {
+function JournalEntryCard({ entry }: { entry: JournalEntry }) {
   const { deleteJournalEntry, updateJournalEntryNotes } = useJournalStore();
   const { toast } = useToast();
-  const [notes, setNotes] = useState(entry.notes);
+  const [notes, setNotes] = React.useState(entry.notes);
 
   const handleNotesSave = () => {
     updateJournalEntryNotes(entry.id, notes);
@@ -109,14 +112,17 @@ function JournalEntryCard({ entry }: { entry: ReturnType<typeof useJournalStore>
 
 
 export function JournalPage() {
-  const { entries, isLoaded } = useJournalStore();
+  const { entries, isLoaded: isJournalLoaded } = useJournalStore();
+  const { categories, isLoaded: isCategoriesLoaded } = usePrayerStore();
+
+  const isLoaded = isJournalLoaded && isCategoriesLoaded;
 
   const groupedEntries = entries.reduce((acc, entry) => {
-    const date = format(new Date(entry.createdAt), 'MMMM d, yyyy');
-    if (!acc[date]) {
-      acc[date] = [];
+    const categoryId = entry.categoryId || 'uncategorized';
+    if (!acc[categoryId]) {
+      acc[categoryId] = [];
     }
-    acc[date].push(entry);
+    acc[categoryId].push(entry);
     return acc;
   }, {} as Record<string, typeof entries>);
 
@@ -136,19 +142,26 @@ export function JournalPage() {
                 <Skeleton className="h-28 w-full" />
             </div>
           ) : Object.keys(groupedEntries).length > 0 ? (
-            <Accordion type="single" collapsible className="w-full space-y-4" defaultValue={Object.keys(groupedEntries)[0]}>
-              {Object.entries(groupedEntries).map(([date, entriesForDate]) => (
-                 <AccordionItem value={date} key={date}>
+            <Accordion type="multiple" className="w-full space-y-4" defaultValue={Object.keys(groupedEntries)}>
+              {Object.entries(groupedEntries).map(([categoryId, entriesForCategory]) => {
+                 const category = categories.find(c => c.id === categoryId);
+                 const CategoryIcon = getIcon(category?.icon || 'Folder');
+                 return (
+                 <AccordionItem value={categoryId} key={categoryId}>
                     <AccordionTrigger>
-                        <h2 className="text-lg font-semibold">{date}</h2>
+                        <div className="flex items-center gap-3">
+                            <CategoryIcon className="h-5 w-5 text-muted-foreground"/>
+                            <h2 className="text-lg font-semibold">{category?.name || 'Uncategorized'}</h2>
+                        </div>
                     </AccordionTrigger>
                     <AccordionContent>
-                        {entriesForDate.map(entry => (
+                        {entriesForCategory.map(entry => (
                            <JournalEntryCard key={entry.id} entry={entry} />
                         ))}
                     </AccordionContent>
                  </AccordionItem>
-              ))}
+                 )
+              })}
             </Accordion>
           ) : (
             <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] text-center text-muted-foreground">

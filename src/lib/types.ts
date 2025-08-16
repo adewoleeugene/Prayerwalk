@@ -22,4 +22,5 @@ export interface JournalEntry {
   sourceData?: string; // Data URI for image/audio
   notes: string; // Full transcribed text
   prayerPoints: { point: string; bibleVerse: string; }[];
+  categoryId?: string;
 }
