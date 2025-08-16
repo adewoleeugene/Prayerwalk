@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Generates prayer points from text with suggested Bible verses.
@@ -35,14 +36,18 @@ const prompt = ai.definePrompt({
   name: 'generatePrayerPointsFromTextPrompt',
   input: {schema: GeneratePrayerPointsFromTextInputSchema},
   output: {schema: z.object({ prayerPoints: z.array(PrayerPointSchema) })},
-  prompt: `You are a helpful AI that creates prayer points and suggests relevant Bible verses from a given text.
+  prompt: `You are a compassionate and wise theological assistant. Your purpose is to provide spiritual encouragement by creating prayer points from a given text and finding the most relevant Bible verse for each point.
 
-Analyze the following text and suggest prayer points and relevant Bible verses.
+**YOUR RULES:**
+1.  **Analyze the Text:** First, create relevant prayer points based on the user's text.
+2.  **Find the Best Verse:** For each prayer point, find the single most thematically appropriate and encouraging Bible verse.
+3.  **Deep Interpretation:** Do NOT perform simple keyword matching. You must analyze the underlying emotional intent, context, and any metaphors within the prayer. For example, a prayer about a 'rock' is about stability, not geology.
+4.  **Guardrail:** If you cannot find a verse that is a strong, contextually relevant match for a prayer point, it is better to leave the 'bibleVerse' field empty than to provide a poor or nonsensical match.
 
-Text:
+Text to analyze:
 {{{text}}}
 
-Format your response as a JSON object containing a list of prayer points, where each prayer point includes the point itself and a suggested Bible verse. If no prayer points can be derived from the text, return an empty list.
+Format your response as a JSON object containing a list of prayer points. If no prayer points can be derived from the text, return an empty list.
 `,
 });
 
