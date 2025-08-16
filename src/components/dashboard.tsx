@@ -34,16 +34,19 @@ export function Dashboard() {
         <ScrollArea className="h-[calc(100vh-129px)] md:h-[calc(100vh-65px)]">
           <div className="p-4 md:p-6">
             {!isLoaded ? (
-              <div className="grid grid-cols-2 gap-4">
-                  <Skeleton className="h-24 w-full" />
-                  <Skeleton className="h-24 w-full" />
-                  <Skeleton className="h-24 w-full" />
-                  <Skeleton className="h-24 w-full" />
+              <div className="space-y-4">
+                 <Skeleton className="h-24 w-full" />
+                 <div className="grid grid-cols-2 gap-4">
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                    <Skeleton className="h-24 w-full" />
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
                 <Card
-                  className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border-dashed border-2 hover:border-primary"
+                  className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border-dashed border-2 border-primary"
                   onClick={() => setIsCategoryDialogOpen(true)}
                 >
                   <CardContent className="p-4 flex items-center justify-center gap-4 text-primary">
@@ -74,6 +77,7 @@ export function Dashboard() {
                       icon={category.icon}
                       count={prayers.filter(p => p.categoryId === category.id && p.status === 'active').length}
                       onClick={() => setSelectedView(category.id)}
+                      variant="primary"
                     />
                   ))}
                 </div>
