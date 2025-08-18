@@ -252,6 +252,16 @@ export default function PrayerWalkPage() {
 
   const currentPrayer = sessionPrayers[currentIndex];
   const progress = ((currentIndex + 1) / sessionPrayers.length) * 100;
+  
+  if (!currentPrayer) {
+      return (
+          <div className="flex flex-col items-center justify-center h-screen gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p>Loading...</p>
+          </div>
+      );
+  }
+
 
   return (
     <div className="flex flex-col h-screen bg-background p-4 md:p-8">
@@ -299,7 +309,7 @@ export default function PrayerWalkPage() {
         
         <AlertDialog>
             <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="lg" onClick={handleEndSession}>
+                <Button variant="destructive" size="lg">
                     <Square className="h-5 w-5 md:mr-2" />
                     <span className="hidden md:inline">End Walk</span>
                 </Button>
@@ -331,3 +341,5 @@ export default function PrayerWalkPage() {
     </div>
   );
 }
+
+    
