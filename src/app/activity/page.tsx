@@ -151,9 +151,15 @@ export function ActivityPage() {
         const currentHourlyData = Array.from({ length: 24 }, (_, i) => {
             const sessionsInHour = dayPrayerWalks.filter(e => new Date(e.createdAt).getHours() === i);
             const total = Math.floor(sessionsInHour.reduce((sum, e) => sum + (e.duration || 0), 0) / 60);
+            let label = '';
+            if (i === 0) label = '12am';
+            else if (i === 6) label = '6am';
+            else if (i === 12) label = '12pm';
+            else if (i === 18) label = '6pm';
+            
             return {
                 time: format(new Date(2000, 0, 1, i), 'h a'),
-                label: format(new Date(2000, 0, 1, i), 'ha').toLowerCase(),
+                label: label,
                 total: total,
             };
         });
