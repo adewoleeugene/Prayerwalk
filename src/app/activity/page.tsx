@@ -77,13 +77,13 @@ function PrayerActivityChart({ hourlyData }: { hourlyData: any[] }) {
 }
 
 const StatCard = ({ title, value, goal, icon: Icon }: { title: string, value: string, goal?: string, icon: React.ElementType }) => (
-    <div className="flex items-center gap-4">
-        <Icon className="h-6 w-6 text-primary" />
+    <div className="flex flex-col items-center text-center gap-2">
+        <Icon className="h-8 w-8 text-primary" />
         <div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-xl font-bold">{value}
+            <p className="text-2xl font-bold">{value}
                 {goal && <span className="text-sm font-normal text-muted-foreground">/{goal}</span>}
             </p>
+            <p className="text-sm text-muted-foreground">{title}</p>
         </div>
     </div>
 );
@@ -237,7 +237,7 @@ export function ActivityPage() {
                     <Card>
                         <CardContent className="p-4 flex flex-wrap items-center justify-around gap-4">
                            <StatCard title="Prayers Added" value={dailyStats.prayersAdded?.toString() || '0'} icon={PlusCircle} />
-                           <StatCard title="Prayer Time" value={dailyStats.prayerTime?.toString() || '0'} goal={`${goal.dailyPrayerTime} min`} icon={Clock} />
+                           <StatCard title="Prayer Time" value={`${dailyStats.prayerTime?.toString() || '0'}`} goal={`${goal.dailyPrayerTime} min`} icon={Clock} />
                            <StatCard title="Answered" value={dailyStats.answeredPrayers?.toString() || '0'} icon={CheckCircle} />
                         </CardContent>
                     </Card>
