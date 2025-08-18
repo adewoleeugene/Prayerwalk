@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, from 'react';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { Prayer } from '@/lib/types';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -23,17 +23,17 @@ export default function PrayerWalkPage() {
   const { prayers, categories, isLoaded, togglePrayerStatus } = usePrayerStore();
   const { toast } = useToast();
 
-  const [sessionPrayers, setSessionPrayers] = useState<Prayer[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [selectedPrayer, setSelectedPrayer] = useState<Prayer | undefined>(undefined);
-  const [sessionTitle, setSessionTitle] = useState("Prayer Walk");
+  const [sessionPrayers, setSessionPrayers] = React.useState<Prayer[]>([]);
+  const [currentIndex, setCurrentIndex] = React.useState(0);
+  const [isFormOpen, setIsFormOpen] = React.useState(false);
+  const [selectedPrayer, setSelectedPrayer] = React.useState<Prayer | undefined>(undefined);
+  const [sessionTitle, setSessionTitle] = React.useState("Prayer Walk");
   
   // Timer state
-  const [timePerPrayer, setTimePerPrayer] = useState(300); // default 5 mins
-  const [remainingTime, setRemainingTime] = useState(timePerPrayer);
+  const [timePerPrayer, setTimePerPrayer] = React.useState(300); // default 5 mins
+  const [remainingTime, setRemainingTime] = React.useState(timePerPrayer);
 
-  useEffect(() => {
+  React.useEffect(() => {
     if (isLoaded) {
       const timingMode = searchParams.get('timingMode') || 'per_prayer';
       const duration = parseInt(searchParams.get('duration') || '5', 10);
@@ -71,13 +71,15 @@ export default function PrayerWalkPage() {
     }
   }, [isLoaded, prayers, categories, categoryId, searchParams]);
 
-  useEffect(() => {
+  React.useEffect(() => {
+    if (sessionPrayers.length === 0 || currentIndex >= sessionPrayers.length) return;
+
     if (remainingTime > 0) {
         const timer = setInterval(() => {
             setRemainingTime(prev => prev - 1);
         }, 1000);
         return () => clearInterval(timer);
-    } else if (sessionPrayers.length > 0 && currentIndex < sessionPrayers.length) {
+    } else {
         goNext();
     }
   }, [remainingTime, sessionPrayers.length, currentIndex]);
@@ -126,15 +128,12 @@ export default function PrayerWalkPage() {
   }
   
   const SessionCompleteContent = () => {
-      const totalTimeSpent = (sessionPrayers.length - (remainingTime > 0 ? 1 : 0)) * timePerPrayer + (timePerPrayer - remainingTime);
-      const prayersCompleted = Math.min(currentIndex, sessionPrayers.length);
-
       return (
         <>
             <AlertDialogHeader>
                 <AlertDialogTitle className="text-center text-3xl font-bold font-headline">Prayer Walk Complete!</AlertDialogTitle>
                 <AlertDialogDescription className="text-center">
-                    You prayed through {prayersCompleted} prayer point(s).
+                    You prayed through {Math.min(currentIndex, sessionPrayers.length)} prayer point(s).
                 </AlertDialogDescription>
             </AlertDialogHeader>
 
@@ -194,9 +193,13 @@ export default function PrayerWalkPage() {
 
   if (currentIndex >= sessionPrayers.length) {
     return (
-        <div className="flex flex-col h-screen bg-background items-center justify-center">
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
             <div className="w-full max-w-lg p-4">
-                <SessionCompleteContent />
+                <AlertDialog open>
+                    <AlertDialogContent>
+                        <SessionCompleteContent />
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
             <PrayerFormDialog 
                 open={isFormOpen} 

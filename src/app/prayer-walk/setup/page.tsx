@@ -11,17 +11,24 @@ import { Slider } from '@/components/ui/slider';
 import { ArrowLeft } from 'lucide-react';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
 
-type TimingMode = 'total' | 'per_prayer';
+type TimingMode = 'per_prayer' | 'total';
 
 export default function PrayerWalkSetupPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { categories } = usePrayerStore();
+  const { categories, prayers } = usePrayerStore();
 
   const mode = searchParams.get('mode'); // category, custom, shuffle
   const id = searchParams.get('id'); // categoryId or null
   const ids = searchParams.get('ids'); // comma-separated prayerIds or null
-  const prayerCount = parseInt(searchParams.get('count') || '0', 10);
+  
+  const prayerCount = useMemo(() => {
+    if (mode === 'shuffle') {
+      return prayers.filter(p => p.status === 'active').length;
+    }
+    return parseInt(searchParams.get('count') || '0', 10)
+  }, [mode, searchParams, prayers]);
+
 
   const [timingMode, setTimingMode] = useState<TimingMode>('per_prayer');
   const [duration, setDuration] = useState(5); // Default 5 minutes
@@ -38,16 +45,17 @@ export default function PrayerWalkSetupPage() {
 
   const handleStartWalk = () => {
     let path = '';
-    if (mode === 'category') {
+    if (mode === 'category' && id) {
       path = `/prayer-walk/${id}`;
-    } else if (mode === 'custom') {
+    } else if (mode === 'custom' && ids) {
       path = `/prayer-walk/custom?ids=${ids}`;
     } else if (mode === 'shuffle') {
       path = `/prayer-walk/shuffle`;
     }
     
     if (path) {
-      router.push(`${path}&timingMode=${timingMode}&duration=${duration}`);
+      const finalIds = mode === 'custom' ? `&ids=${ids}` : '';
+      router.push(`${path}?timingMode=${timingMode}&duration=${duration}${finalIds}`);
     }
   };
 
@@ -71,28 +79,30 @@ export default function PrayerWalkSetupPage() {
       <main className="flex-1 p-4 md:p-6">
         <Card>
           <CardHeader>
-            <CardTitle>{sessionTitle}</CardTitle>
+            <CardTitle className="font-bold text-2xl">{sessionTitle}</CardTitle>
             <CardDescription>
-              {prayerCount > 0 ? `You are about to pray through ${prayerCount} prayer points.` : 'Setting up your shuffled walk.'}
+              {prayerCount > 0 
+                ? `You are about to pray through ${prayerCount} prayer point${prayerCount > 1 ? 's' : ''}.` 
+                : 'Setting up your shuffled walk.'}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
             <div className="space-y-4">
-              <Label className="text-lg font-medium">Timing</Label>
-              <RadioGroup value={timingMode} onValueChange={(value) => setTimingMode(value as TimingMode)}>
-                <div className="flex items-center space-x-2">
+              <h3 className="font-semibold text-lg">Timing</h3>
+              <RadioGroup value={timingMode} onValueChange={(value) => setTimingMode(value as TimingMode)} className="space-y-2">
+                <Label htmlFor="per_prayer" className="flex items-center gap-3 p-3 border rounded-md has-[:checked]:bg-secondary has-[:checked]:border-primary/50 cursor-pointer">
                   <RadioGroupItem value="per_prayer" id="per_prayer" />
-                  <Label htmlFor="per_prayer">Time Per Prayer</Label>
-                </div>
-                <div className="flex items-center space-x-2">
+                  Time Per Prayer
+                </Label>
+                <Label htmlFor="total" className="flex items-center gap-3 p-3 border rounded-md has-[:checked]:bg-secondary has-[:checked]:border-primary/50 cursor-pointer">
                   <RadioGroupItem value="total" id="total" />
-                  <Label htmlFor="total">Total Session Time</Label>
-                </div>
+                  Total Session Time
+                </Label>
               </RadioGroup>
             </div>
 
             <div className="space-y-4">
-                <Label htmlFor="duration-slider" className="text-lg font-medium">{getDurationLabel()}</Label>
+                <Label htmlFor="duration-slider" className="text-lg font-semibold">{getDurationLabel()}</Label>
                 <Slider
                     id="duration-slider"
                     value={[duration]}
