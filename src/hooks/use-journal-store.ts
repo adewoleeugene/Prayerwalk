@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { JournalEntry } from '@/lib/types';
 
 const JOURNAL_STORAGE_KEY = 'praysmart-journal';
@@ -22,6 +22,8 @@ export const useJournalStore = () => {
       const storedDuration = localStorage.getItem(LAST_SESSION_DURATION_KEY);
       if (storedDuration) {
         setLastSessionDurationState(JSON.parse(storedDuration));
+      } else {
+        setLastSessionDurationState(0);
       }
 
     } catch (error) {
@@ -30,14 +32,16 @@ export const useJournalStore = () => {
     setIsLoaded(true);
   }, []);
 
+  const setLastSessionDuration = useCallback((duration: number) => {
+    localStorage.setItem(LAST_SESSION_DURATION_KEY, JSON.stringify(duration));
+    setLastSessionDurationState(duration);
+  }, []);
+
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(entries));
-      if (lastSessionDuration !== null) {
-        localStorage.setItem(LAST_SESSION_DURATION_KEY, JSON.stringify(lastSessionDuration));
-      }
     }
-  }, [entries, lastSessionDuration, isLoaded]);
+  }, [entries, isLoaded]);
 
   const addJournalEntry = (entry: Omit<JournalEntry, 'id' | 'createdAt'>) => {
     const newEntry: JournalEntry = {
@@ -57,10 +61,24 @@ export const useJournalStore = () => {
       entry.id === id ? { ...entry, notes } : entry
     ));
   };
+  
+  // This effect handles events from other tabs/windows
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key === LAST_SESSION_DURATION_KEY && event.newValue) {
+        setLastSessionDurationState(JSON.parse(event.newValue));
+      }
+      if (event.key === JOURNAL_STORAGE_KEY && event.newValue) {
+        setEntries(JSON.parse(event.newValue));
+      }
+    };
 
-  const setLastSessionDuration = (duration: number) => {
-    setLastSessionDurationState(duration);
-  }
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
+
 
   return {
     entries,

@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { FolderPlus, Footprints, Sparkles, Activity, Trash2 } from 'lucide-react';
+import { FolderPlus, Footprints, Sparkles, Trash2 } from 'lucide-react';
 import { getDailyVerse, DailyVerse } from '@/ai/flows/get-daily-verse';
 import { Skeleton } from './ui/skeleton';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import type { View } from '@/app/page';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { format, subDays, formatDistanceToNow } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { analyzePrayerActivity, AnalyzePrayerActivityOutput } from '@/ai/flows/analyze-prayer-activity';
 import { useJournalStore } from '@/hooks/use-journal-store';
 
@@ -87,9 +87,10 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const lastPrayerTime = lastPrayer ? new Date(lastPrayer.createdAt) : null;
   
   const lastSessionDurationFormatted = (() => {
-    if (lastSessionDuration === null || lastSessionDuration === 0) return "0 minutes";
+    if (lastSessionDuration === null || lastSessionDuration === undefined) return ["0", "minutes"];
     const minutes = Math.floor(lastSessionDuration / 60);
-    return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+    const unit = minutes === 1 ? 'minute' : 'minutes';
+    return [minutes.toString(), unit];
   })();
 
 
@@ -184,8 +185,8 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
                 <Card className="shadow-md">
                      <CardContent className="p-4">
                         <p className="text-sm text-muted-foreground">Duration</p>
-                        <p className="text-2xl font-bold">{lastSessionDurationFormatted.split(' ')[0]}</p>
-                        <p className="text-sm font-medium">{lastSessionDurationFormatted.split(' ')[1]}</p>
+                        <p className="text-2xl font-bold">{lastSessionDurationFormatted[0]}</p>
+                        <p className="text-sm font-medium capitalize">{lastSessionDurationFormatted[1]}</p>
                     </CardContent>
                 </Card>
               </div>
