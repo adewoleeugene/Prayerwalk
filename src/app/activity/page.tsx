@@ -1,15 +1,15 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useJournalStore } from '@/hooks/use-journal-store';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
-import { format, subDays, startOfDay, eachDayOfInterval, isSameDay, getDay, isToday } from 'date-fns';
+import { format, subDays, startOfDay, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 import { JournalList } from '../journal/page';
-import { ArrowLeft, CheckCircle, Clock, PlusCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, PlusCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
@@ -83,12 +83,21 @@ export function ActivityPage() {
     const { entries, isLoaded: isJournalLoaded } = useJournalStore();
     const { prayers, categories, isLoaded: isPrayerLoaded } = usePrayerStore();
 
+    const [currentDate, setCurrentDate] = useState(startOfDay(new Date()));
     const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
 
     const weekDays = useMemo(() => {
-        const end = startOfDay(new Date());
-        const start = subDays(end, 6);
+        const start = startOfWeek(currentDate);
+        const end = endOfWeek(currentDate);
         return eachDayOfInterval({ start, end });
+    }, [currentDate]);
+
+    const goToPreviousWeek = useCallback(() => {
+        setCurrentDate(prev => subWeeks(prev, 1));
+    }, []);
+
+    const goToNextWeek = useCallback(() => {
+        setCurrentDate(prev => addWeeks(prev, 1));
     }, []);
 
     const { dailyStats, hourlyData, weeklySummary } = useMemo(() => {
@@ -118,7 +127,13 @@ export function ActivityPage() {
         });
 
         // Calculate stats for the whole week
-        const weekPrayerWalks = entries.filter(e => e.sourceType === 'live' && e.duration && new Date(e.createdAt) >= weekDays[0]);
+        const weekStart = startOfWeek(currentDate);
+        const weekEnd = endOfWeek(currentDate);
+        const weekPrayerWalks = entries.filter(e => {
+            const entryDate = new Date(e.createdAt);
+            return e.sourceType === 'live' && e.duration && entryDate >= weekStart && entryDate <= weekEnd;
+        });
+
         const totalWeekMinutes = Math.floor(weekPrayerWalks.reduce((sum, e) => sum + (e.duration || 0), 0) / 60);
         
         const categoryCounts: { [key: string]: number } = {};
@@ -128,7 +143,9 @@ export function ActivityPage() {
             }
         });
         
-        const mostPrayedCategoryId = Object.keys(categoryCounts).reduce((a, b) => categoryCounts[a] > categoryCounts[b] ? a : b, '');
+        const mostPrayedCategoryId = Object.keys(categoryCounts).length > 0
+            ? Object.keys(categoryCounts).reduce((a, b) => categoryCounts[a] > categoryCounts[b] ? a : b)
+            : '';
         const mostPrayedCategory = categories.find(c => c.id === mostPrayedCategoryId)?.name || 'N/A';
 
         const currentWeeklySummary = {
@@ -138,7 +155,7 @@ export function ActivityPage() {
 
         return { dailyStats: currentDailyStats, hourlyData: currentHourlyData, weeklySummary: currentWeeklySummary };
 
-    }, [selectedDate, entries, prayers, categories, isJournalLoaded, isPrayerLoaded, weekDays]);
+    }, [selectedDate, entries, prayers, categories, isJournalLoaded, isPrayerLoaded, currentDate]);
 
     return (
         <>
@@ -151,32 +168,41 @@ export function ActivityPage() {
             </header>
             <ScrollArea className="h-[calc(100vh-65px)]">
                 <main className="p-4 md:p-6 space-y-6">
-                    <Carousel opts={{ align: "start", loop: false }} className="w-full">
-                        <CarouselContent className="-ml-2">
-                            {weekDays.map((day, index) => (
-                                <CarouselItem key={index} className="pl-2 basis-1/5 md:basis-1/7">
-                                    <div 
-                                        className="flex flex-col items-center justify-center gap-2 cursor-pointer"
-                                        onClick={() => setSelectedDate(day)}
-                                    >
-                                        <p className="text-sm text-muted-foreground">{format(day, 'E')}</p>
-                                        <div className={cn(
-                                            "flex items-center justify-center w-10 h-10 rounded-full border-2",
-                                            isSameDay(day, selectedDate) ? "bg-primary text-primary-foreground border-primary" : "border-transparent",
-                                            isToday(day) && !isSameDay(day, selectedDate) && "border-primary/50"
-                                        )}>
-                                            <p className="font-bold">{format(day, 'd')}</p>
-                                        </div>
-                                    </div>
-                                </CarouselItem>
-                            ))}
-                        </CarouselContent>
-                    </Carousel>
+                    <div className="flex items-center justify-between">
+                        <Button variant="ghost" size="icon" onClick={goToPreviousWeek}>
+                            <ChevronLeft />
+                        </Button>
+                        <div className="text-center font-semibold">
+                            {format(currentDate, 'MMMM yyyy')}
+                        </div>
+                        <Button variant="ghost" size="icon" onClick={goToNextWeek}>
+                            <ChevronRight />
+                        </Button>
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-1 text-center">
+                        {weekDays.map((day) => (
+                            <div 
+                                key={day.toString()}
+                                className="flex flex-col items-center justify-center gap-2 cursor-pointer"
+                                onClick={() => setSelectedDate(day)}
+                            >
+                                <p className="text-sm text-muted-foreground">{format(day, 'E')}</p>
+                                <div className={cn(
+                                    "flex items-center justify-center w-10 h-10 rounded-full border-2",
+                                    isSameDay(day, selectedDate) ? "bg-primary text-primary-foreground border-primary" : "border-transparent",
+                                    isToday(day) && !isSameDay(day, selectedDate) && "border-primary/50"
+                                )}>
+                                    <p className="font-bold">{format(day, 'd')}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
 
                     <Card>
                         <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                            <StatCard title="Prayers Added" value={dailyStats.prayersAdded?.toString() || '0'} icon={PlusCircle} />
-                           <StatCard title="Prayer Time" value={dailyStats.prayerTime?.toString() || '0'} goal="60 min" icon={Clock} />
+                           <StatCard title="Prayer Time" value={dailyStats.prayerTime?.toString() || '0'} goal="min" icon={Clock} />
                            <StatCard title="Answered" value={dailyStats.answeredPrayers?.toString() || '0'} icon={CheckCircle} />
                         </CardContent>
                     </Card>
