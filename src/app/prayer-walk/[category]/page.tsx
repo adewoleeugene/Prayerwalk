@@ -130,7 +130,7 @@ export default function PrayerWalkPage() {
       title: sessionTitle,
       sourceType: 'live',
       notes: `Completed a prayer walk session for ${formatTime(elapsedTime)}.`,
-      prayerPoints: sessionPrayers.slice(0, currentIndex).map(p => ({ point: p.title, bibleVerse: p.bibleVerse || '' })),
+      prayerPoints: sessionPrayers.slice(0, currentIndex + 1).map(p => ({ point: p.title, bibleVerse: p.bibleVerse || '' })),
       categoryId: categoryId,
       duration: elapsedTime,
     });
@@ -174,20 +174,21 @@ export default function PrayerWalkPage() {
   };
   
   const SessionCompleteContent = () => {
-      const answeredCount = sessionPrayers.slice(0, Math.min(currentIndex, sessionPrayers.length)).filter(p => p.status === 'answered').length;
+      const prayersPrayed = sessionPrayers.slice(0, Math.min(currentIndex, sessionPrayers.length));
+      const answeredCount = prayersPrayed.filter(p => p.status === 'answered').length;
 
       return (
-        <>
+        <AlertDialogContent className="p-0 gap-0">
              <AlertDialogHeader className="text-center p-4 border-b">
                 <AlertDialogTitle className="text-3xl font-bold font-headline">Prayer Walk Complete!</AlertDialogTitle>
                 <AlertDialogDescription className="mt-2">
-                     You prayed for {formatTime(elapsedTime)} through {Math.min(currentIndex, sessionPrayers.length)} prayer point(s). {answeredCount > 0 && `${answeredCount} prayer(s) were answered.`}
+                     You prayed for {formatTime(elapsedTime)} through {prayersPrayed.length} prayer point(s). {answeredCount > 0 && `${answeredCount} prayer(s) were answered.`}
                 </AlertDialogDescription>
             </AlertDialogHeader>
 
             <ScrollArea className="max-h-[50vh] -mx-6 px-2">
                 <main className="py-4 space-y-4 px-4">
-                    {sessionPrayers.slice(0, currentIndex).map(prayer => (
+                    {prayersPrayed.map(prayer => (
                         <Card key={prayer.id} className="shadow-sm">
                             <CardHeader className="p-4">
                                 <CardTitle className="text-md font-medium">{prayer.title}</CardTitle>
@@ -219,7 +220,7 @@ export default function PrayerWalkPage() {
                     router.push('/');
                 }} className="w-full">Finish</AlertDialogAction>
             </AlertDialogFooter>
-        </>
+        </AlertDialogContent>
       )
   }
 
@@ -241,32 +242,14 @@ export default function PrayerWalkPage() {
       );
   }
 
-  if (isSessionEnded) {
-    return (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <AlertDialog open>
-                <AlertDialogContent className="p-0 gap-0">
-                    <SessionCompleteContent />
-                </AlertDialogContent>
-            </AlertDialog>
-            <PrayerFormDialog 
-                open={isFormOpen} 
-                onOpenChange={setIsFormOpen} 
-                prayerToEdit={selectedPrayer}
-            />
-        </div>
-    );
-  }
-
   const currentPrayer = sessionPrayers[currentIndex];
   const progress = ((currentIndex + 1) / sessionPrayers.length) * 100;
   
-  if (!currentPrayer) {
-      // This state can happen briefly when session prayers are being loaded
+  if (!currentPrayer && !isSessionEnded) {
       return (
           <div className="flex flex-col items-center justify-center h-screen gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              <p>Loading...</p>
+              <p>Preparing your session...</p>
           </div>
       );
   }
@@ -274,74 +257,84 @@ export default function PrayerWalkPage() {
 
   return (
     <div className="flex flex-col h-screen bg-background p-4 md:p-8">
-      <header className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold font-headline">{sessionTitle}</h1>
-        <div className="text-lg font-semibold tabular-nums flex items-center gap-2">
-            <Timer className="h-5 w-5" />
-            {formatCountdown(remainingTime)}
-        </div>
-      </header>
+        {isSessionEnded ? (
+             <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <AlertDialog open>
+                    <SessionCompleteContent />
+                </AlertDialog>
+            </div>
+        ) : (
+        <>
+            <header className="flex items-center justify-between mb-4">
+                <h1 className="text-2xl font-bold font-headline">{sessionTitle}</h1>
+                <div className="text-lg font-semibold tabular-nums flex items-center gap-2">
+                    <Timer className="h-5 w-5" />
+                    {formatCountdown(remainingTime)}
+                </div>
+            </header>
 
-      <Progress value={progress} className="w-full mb-4" />
-      
-      <main className="flex-1 flex items-center justify-center">
-        <Card className="w-full max-w-2xl shadow-xl animate-in fade-in zoom-in-95">
-          <CardHeader>
-            <CardTitle className="text-3xl md:text-4xl text-center">{currentPrayer.title}</CardTitle>
-            {currentPrayer.bibleVerse && (
-              <CardDescription className="text-center text-md pt-2">
-                {currentPrayer.bibleVerse}
-              </CardDescription>
-            )}
-          </CardHeader>
-          {currentPrayer.notes && (
-            <CardContent>
-                <p className="text-center text-muted-foreground italic">"{currentPrayer.notes}"</p>
-            </CardContent>
-          )}
-        </Card>
-      </main>
+            <Progress value={progress} className="w-full mb-4" />
+            
+            <main className="flex-1 flex items-center justify-center">
+                <Card className="w-full max-w-2xl shadow-xl animate-in fade-in zoom-in-95">
+                <CardHeader>
+                    <CardTitle className="text-3xl md:text-4xl text-center">{currentPrayer.title}</CardTitle>
+                    {currentPrayer.bibleVerse && (
+                    <CardDescription className="text-center text-md pt-2">
+                        {currentPrayer.bibleVerse}
+                    </CardDescription>
+                    )}
+                </CardHeader>
+                {currentPrayer.notes && (
+                    <CardContent>
+                        <p className="text-center text-muted-foreground italic">"{currentPrayer.notes}"</p>
+                    </CardContent>
+                )}
+                </Card>
+            </main>
 
-       <div className="grid grid-cols-5 gap-2 my-4">
-            <Button variant="outline" size="sm" onClick={() => addTime(30)}>+30s</Button>
-            <Button variant="outline" size="sm" onClick={() => addTime(60)}>+1m</Button>
-            <Button variant="outline" size="sm" onClick={() => addTime(180)}>+3m</Button>
-            <Button variant="outline" size="sm" onClick={() => addTime(300)}>+5m</Button>
-            <Button variant="outline" size="sm" onClick={() => addTime(600)}>+10m</Button>
-       </div>
+            <div className="grid grid-cols-5 gap-2 my-4">
+                    <Button variant="outline" size="sm" onClick={() => addTime(30)}>+30s</Button>
+                    <Button variant="outline" size="sm" onClick={() => addTime(60)}>+1m</Button>
+                    <Button variant="outline" size="sm" onClick={() => addTime(180)}>+3m</Button>
+                    <Button variant="outline" size="sm" onClick={() => addTime(300)}>+5m</Button>
+                    <Button variant="outline" size="sm" onClick={() => addTime(600)}>+10m</Button>
+            </div>
 
-      <footer className="grid grid-cols-3 items-center gap-4 mt-auto">
-        <Button variant="outline" size="lg" onClick={goPrev} disabled={currentIndex === 0}>
-          <ChevronLeft className="h-6 w-6 md:mr-2"/>
-          <span className="hidden md:inline">Prev</span>
-        </Button>
-        
-        <AlertDialog>
-            <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="lg">
-                    <Square className="h-5 w-5 md:mr-2" />
-                    <span className="hidden md:inline">End Walk</span>
+            <footer className="grid grid-cols-3 items-center gap-4 mt-auto">
+                <Button variant="outline" size="lg" onClick={goPrev} disabled={currentIndex === 0}>
+                <ChevronLeft className="h-6 w-6 md:mr-2"/>
+                <span className="hidden md:inline">Prev</span>
                 </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>End your prayer walk?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        This will end the current session. You can review your prayers before finishing.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleEndSession}>End Walk</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
+                
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" size="lg">
+                            <Square className="h-5 w-5 md:mr-2" />
+                            <span className="hidden md:inline">End Walk</span>
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>End your prayer walk?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This will end the current session. You can review your prayers before finishing.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleEndSession}>End Walk</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
 
-        <Button size="lg" onClick={goNext}>
-          <span className="hidden md:inline">{currentIndex === sessionPrayers.length - 1 ? "Finish" : "Next"}</span>
-          <ChevronRight className="h-6 w-6 md:ml-2" />
-        </Button>
-      </footer>
+                <Button size="lg" onClick={goNext}>
+                <span className="hidden md:inline">{currentIndex === sessionPrayers.length - 1 ? "Finish" : "Next"}</span>
+                <ChevronRight className="h-6 w-6 md:ml-2" />
+                </Button>
+            </footer>
+        </>
+        )}
        <PrayerFormDialog 
         open={isFormOpen} 
         onOpenChange={setIsFormOpen} 
