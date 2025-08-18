@@ -103,6 +103,8 @@ export default function PrayerWalkPage() {
           title: "Prayer Answered!",
           description: `"${prayer.title}" has been marked as answered.`
       });
+      // We also update the session prayers to reflect the change visually
+      setSessionPrayers(prev => prev.map(p => p.id === prayer.id ? { ...p, status: 'answered' } : p));
   }
 
   if (currentIndex >= sessionPrayers.length) {
@@ -128,7 +130,7 @@ export default function PrayerWalkPage() {
                                 Add Note / Edit
                             </Button>
                             {prayer.status === 'active' && (
-                                <Button variant="outline" size="sm" className="text-green-600" onClick={() => handleMarkAnswered(prayer)}>
+                                <Button variant="outline" size="sm" className="text-green-600 border-green-600/50 hover:bg-green-50" onClick={() => handleMarkAnswered(prayer)}>
                                     <CheckCircle className="h-4 w-4 mr-2" />
                                     Mark as Answered
                                 </Button>
