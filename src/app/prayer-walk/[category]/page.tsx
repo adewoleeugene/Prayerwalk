@@ -59,10 +59,10 @@ export default function PrayerWalkPage() {
       setSessionPrayers(filtered);
       
       if (filtered.length > 0) {
-        let newTimePerPrayer = 300;
+        let newTimePerPrayer = 300; // Default
         if (timingMode === 'total') {
             newTimePerPrayer = Math.floor((duration * 60) / filtered.length);
-        } else {
+        } else { // 'per_prayer'
             newTimePerPrayer = duration * 60;
         }
         setTimePerPrayer(newTimePerPrayer);
@@ -282,3 +282,5 @@ export default function PrayerWalkPage() {
     </div>
   );
 }
+
+    
