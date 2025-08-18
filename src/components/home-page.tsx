@@ -13,10 +13,10 @@ import { PrayerCard } from './prayer-card';
 import { AddCategoryDialog } from './add-category-dialog';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import type { View } from '@/app/page';
-import { analyzePrayerActivity, AnalyzePrayerActivityOutput } from '@/ai/flows/analyze-prayer-activity';
-import { PrayerChart } from './prayer-chart';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { formatDistanceToNow, format } from 'date-fns';
+
 
 type HomePageProps = {
   onCaptureClick: () => void;
@@ -25,13 +25,11 @@ type HomePageProps = {
 
 export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const { user } = useAuth();
-  const { prayers, categories, isLoaded } = usePrayerStore();
+  const { prayers, isLoaded } = usePrayerStore();
   const [greeting, setGreeting] = useState('');
   const [dailyVerse, setDailyVerse] = useState<DailyVerse | null>(null);
   const [isLoadingVerse, setIsLoadingVerse] = useState(true);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
-  const [analysis, setAnalysis] = useState<AnalyzePrayerActivityOutput | null>(null);
-  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(true);
   const [showRecentActivity, setShowRecentActivity] = useState(true);
   const { toast } = useToast();
 
@@ -47,35 +45,22 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
       .finally(() => setIsLoadingVerse(false));
   }, []);
   
-  useEffect(() => {
-    if(isLoaded && prayers.length > 0 && showRecentActivity) {
-      const recentPrayers = prayers.filter(p => p.status === 'active').slice(0, 10);
-      const answeredPrayers = prayers.filter(p => p.status === 'answered').slice(0, 10);
-
-      if (recentPrayers.length > 0 || answeredPrayers.length > 0) {
-        setIsLoadingAnalysis(true);
-        analyzePrayerActivity({ recentPrayers, answeredPrayers, categories })
-          .then(setAnalysis)
-          .catch(console.error)
-          .finally(() => setIsLoadingAnalysis(false));
-      } else {
-         setIsLoadingAnalysis(false);
-         setAnalysis(null);
-      }
-    } else if (isLoaded) {
-      setIsLoadingAnalysis(false);
-      setAnalysis(null);
-    }
-  }, [isLoaded, prayers, categories, showRecentActivity]);
-
   const handleClearActivity = () => {
-    setAnalysis(null);
     setShowRecentActivity(false);
+    // In a real app, you might want to clear this from localStorage or a backend
     toast({
       title: "Activity Cleared",
       description: "Your recent activity has been cleared from the dashboard.",
     })
   }
+  
+  const lastPrayer = prayers.length > 0 ? prayers[0] : null;
+  const lastPrayerTime = lastPrayer ? new Date(lastPrayer.createdAt) : null;
+  const formattedLastPrayer = lastPrayerTime ? `${formatDistanceToNow(lastPrayerTime, { addSuffix: true })}` : 'N/A';
+  
+  // Mocked duration for demonstration
+  const lastSessionDuration = "30 minutes";
+
 
   const recentPrayersForDisplay = showRecentActivity ? prayers.filter(p => p.status === 'active').slice(0, 3) : [];
   const userName = user?.displayName || user?.email?.split('@')[0] || 'friend';
@@ -131,59 +116,49 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
             </Button>
           </div>
           
-          {/* Recent Activity Analysis */}
+          {/* Recent Activity */}
           { showRecentActivity && (
-            <Card className="shadow-md">
-              <CardHeader>
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <Activity />
-                        Recent Activity
-                      </CardTitle>
-                      <CardDescription>An AI-powered summary of your recent prayer life.</CardDescription>
-                    </div>
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="ghost" size="icon" aria-label="Clear activity">
-                            <Trash2 className="h-5 w-5 text-muted-foreground" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                          <AlertDialogHeader>
-                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                  This action will clear your recent activity summary and recent prayer points from this dashboard view. It will not delete any of your prayer data.
-                              </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                              <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={handleClearActivity}>Clear</AlertDialogAction>
-                          </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-              </CardHeader>
-              <CardContent>
-                {isLoadingAnalysis ? (
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-full" />
-                    <Skeleton className="h-4 w-2/3" />
-                    <Skeleton className="h-32 w-full mt-2" />
-                  </div>
-                ) : analysis && (analysis.summary || analysis.categoryDistribution.length > 0) ? (
-                  <div className="space-y-4">
-                    <p className="text-sm text-muted-foreground italic">"{analysis.summary}"</p>
-                    {analysis.categoryDistribution.length > 0 && <PrayerChart data={analysis.categoryDistribution} />}
-                  </div>
-                ) : (
-                  <div className="text-center text-muted-foreground py-8">
-                    <p>No recent activity to analyze.</p>
-                    <p>Start by adding some prayer points.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <h2 className="text-lg font-bold font-headline">Recent Activity</h2>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label="Clear activity">
+                        <Trash2 className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                      <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                              This action will clear your recent activity summary and recent prayer points from this dashboard view. It will not delete any of your prayer data.
+                          </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleClearActivity}>Clear</AlertDialogAction>
+                      </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <Card className="shadow-md">
+                    <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground">Last Prayer</p>
+                        <p className="text-xl font-bold">{lastPrayerTime ? format(lastPrayerTime, 'p') : 'N/A'}</p>
+                        <p className="text-sm font-medium">{lastPrayerTime ? format(lastPrayerTime, 'eeee') : ''}</p>
+                    </CardContent>
+                </Card>
+                <Card className="shadow-md">
+                     <CardContent className="p-4">
+                        <p className="text-sm text-muted-foreground">Duration</p>
+                        <p className="text-2xl font-bold">{lastSessionDuration.split(' ')[0]}</p>
+                        <p className="text-sm font-medium">{lastSessionDuration.split(' ')[1]}</p>
+                    </CardContent>
+                </Card>
+              </div>
+            </div>
           )}
           
           {/* Recent Prayer Points */}
