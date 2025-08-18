@@ -17,7 +17,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { format, subDays, formatDistanceToNow } from 'date-fns';
 import { analyzePrayerActivity, AnalyzePrayerActivityOutput } from '@/ai/flows/analyze-prayer-activity';
-import { PrayerChart } from './prayer-chart';
 
 
 type HomePageProps = {
@@ -198,16 +197,6 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
                             <p className="text-sm text-muted-foreground">{analysis.summary}</p>
                         </CardContent>
                     </Card>
-                    {analysis.categoryDistribution.length > 0 && (
-                        <Card className="mt-4 shadow-md">
-                            <CardHeader>
-                                <CardTitle className="text-lg">Category Breakdown</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <PrayerChart data={analysis.categoryDistribution} />
-                            </CardContent>
-                        </Card>
-                    )}
                 </>
               )}
             </div>

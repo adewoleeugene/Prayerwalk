@@ -35,11 +35,6 @@ export type AnalyzePrayerActivityInput = z.infer<typeof AnalyzePrayerActivityInp
 
 const AnalyzePrayerActivityOutputSchema = z.object({
   summary: z.string().describe('A thoughtful summary of recent prayer activity, including themes and encouragement.'),
-  categoryDistribution: z.array(z.object({
-    name: z.string(),
-    active: z.number(),
-    answered: z.number(),
-  })).describe('A breakdown of prayers by category.')
 });
 export type AnalyzePrayerActivityOutput = z.infer<typeof AnalyzePrayerActivityOutputSchema>;
 
@@ -86,30 +81,8 @@ const analyzePrayerActivityFlow = ai.defineFlow(
     const { output } = await prompt({ recentPrayers, answeredPrayers, categories });
     const summary = output?.summary || "No recent activity to analyze.";
 
-    // Calculate category distribution
-    const allPrayers = [...recentPrayers, ...answeredPrayers];
-    const distributionMap = new Map<string, { name: string; active: number; answered: number }>();
-
-    categories.forEach(cat => {
-        distributionMap.set(cat.id, { name: cat.name, active: 0, answered: 0 });
-    });
-
-    allPrayers.forEach(prayer => {
-        const catData = distributionMap.get(prayer.categoryId);
-        if (catData) {
-            if (prayer.status === 'answered') {
-                catData.answered += 1;
-            } else {
-                catData.active += 1;
-            }
-        }
-    });
-    
-    const categoryDistribution = Array.from(distributionMap.values()).filter(d => d.active > 0 || d.answered > 0);
-
     return {
       summary,
-      categoryDistribution,
     };
   }
 );
