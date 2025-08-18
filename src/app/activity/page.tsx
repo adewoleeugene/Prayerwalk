@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useJournalStore } from '@/hooks/use-journal-store';
@@ -9,12 +9,15 @@ import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { format, subDays, startOfDay, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 import { JournalList } from '../journal/page';
-import { ArrowLeft, CheckCircle, Clock, PlusCircle, ChevronLeft, ChevronRight, Target } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, PlusCircle, ChevronLeft, ChevronRight, Target, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
-import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+
 
 const ChartTooltipContent = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -88,10 +91,32 @@ const StatCard = ({ title, value, goal, icon: Icon }: { title: string, value: st
 export function ActivityPage() {
     const router = useRouter();
     const { entries, isLoaded: isJournalLoaded } = useJournalStore();
-    const { prayers, categories, goal, isLoaded: isPrayerLoaded } = usePrayerStore();
+    const { prayers, categories, goal, setGoal, isLoaded: isPrayerLoaded } = usePrayerStore();
+    const { toast } = useToast();
 
     const [currentDate, setCurrentDate] = useState(startOfDay(new Date()));
     const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
+
+    const [dailyGoal, setDailyGoal] = useState(goal.dailyPrayerTime);
+    const [isSaving, setIsSaving] = useState(false);
+
+    useEffect(() => {
+        if (isPrayerLoaded) {
+          setDailyGoal(goal.dailyPrayerTime);
+        }
+    }, [isPrayerLoaded, goal.dailyPrayerTime]);
+
+    const handleSaveChanges = () => {
+        setIsSaving(true);
+        setGoal({ dailyPrayerTime: Number(dailyGoal) });
+        setTimeout(() => {
+          toast({
+            title: "Settings Saved",
+            description: "Your prayer goal has been updated.",
+          });
+          setIsSaving(false);
+        }, 500);
+    };
 
     const weekDays = useMemo(() => {
         const start = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday
@@ -128,7 +153,7 @@ export function ActivityPage() {
             const total = Math.floor(sessionsInHour.reduce((sum, e) => sum + (e.duration || 0), 0) / 60);
             return {
                 time: format(new Date(2000, 0, 1, i), 'h a'),
-                label: i % 6 === 0 ? format(new Date(2000, 0, 1, i), 'ha').toLowerCase() : '',
+                label: format(new Date(2000, 0, 1, i), 'ha').toLowerCase(),
                 total: total,
             };
         });
@@ -216,6 +241,32 @@ export function ActivityPage() {
                            <StatCard title="Answered" value={dailyStats.answeredPrayers?.toString() || '0'} icon={CheckCircle} />
                         </CardContent>
                     </Card>
+                    
+                    <Card>
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Target className="h-5 w-5" />
+                                Set Your Goals
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="daily-goal">Daily Prayer Time (minutes)</Label>
+                                <Input 
+                                    id="daily-goal" 
+                                    type="number" 
+                                    value={dailyGoal}
+                                    onChange={(e) => setDailyGoal(Number(e.target.value))}
+                                    placeholder="e.g., 30"
+                                    min="1"
+                                />
+                            </div>
+                            <Button onClick={handleSaveChanges} disabled={isSaving || !isPrayerLoaded}>
+                                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Save Goal
+                            </Button>
+                        </CardContent>
+                    </Card>
 
                     <Card>
                         <CardHeader>
@@ -249,5 +300,3 @@ export function ActivityPage() {
 }
 
 export default ActivityPage;
-
-    
