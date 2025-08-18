@@ -59,6 +59,15 @@ export default function PrayerWalkPage() {
     return () => clearInterval(timer);
   }, []);
   
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    if (mins > 0) {
+        return `${mins}m ${secs}s`;
+    }
+    return `${secs}s`;
+  }
+
   if (!isLoaded) {
     return (
         <div className="flex flex-col items-center justify-center h-screen gap-4">
@@ -68,25 +77,13 @@ export default function PrayerWalkPage() {
     );
   }
   
-  if (sessionPrayers.length === 0) {
+  if (sessionPrayers.length === 0 && isLoaded) {
       return (
           <div className="flex flex-col items-center justify-center h-screen gap-4 p-4 text-center">
               <p className="text-lg">No active prayers found for this session.</p>
               <Button onClick={() => router.back()}>Go Back</Button>
           </div>
       );
-  }
-
-  const currentPrayer = sessionPrayers[currentIndex];
-  const progress = ((currentIndex + 1) / sessionPrayers.length) * 100;
-  
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = (seconds % 60).toString().padStart(2, '0');
-    if (mins > 0) {
-        return `${mins}m ${secs}s`;
-    }
-    return `${secs}s`;
   }
 
   const goNext = () => setCurrentIndex(prev => (prev + 1));
@@ -97,14 +94,17 @@ export default function PrayerWalkPage() {
     setIsFormOpen(true);
   }
 
-  const handleMarkAnswered = (prayer: Prayer) => {
-      togglePrayerStatus(prayer.id);
-      toast({
-          title: "Prayer Answered!",
-          description: `"${prayer.title}" has been marked as answered.`
-      });
-      // We also update the session prayers to reflect the change visually
-      setSessionPrayers(prev => prev.map(p => p.id === prayer.id ? { ...p, status: 'answered' } : p));
+  const handleMarkAnswered = (prayerId: string) => {
+      togglePrayerStatus(prayerId);
+      const prayer = sessionPrayers.find(p => p.id === prayerId);
+      if (prayer) {
+        toast({
+            title: "Prayer Answered!",
+            description: `"${prayer.title}" has been marked as answered.`
+        });
+        // Visually update the prayer in the session complete list
+        setSessionPrayers(prev => prev.map(p => p.id === prayerId ? { ...p, status: 'answered' } : p));
+      }
   }
 
   if (currentIndex >= sessionPrayers.length) {
@@ -129,10 +129,15 @@ export default function PrayerWalkPage() {
                                 <Edit className="h-4 w-4 mr-2" />
                                 Add Note / Edit
                             </Button>
-                            {prayer.status === 'active' && (
-                                <Button variant="outline" size="sm" className="text-green-600 border-green-600/50 hover:bg-green-50" onClick={() => handleMarkAnswered(prayer)}>
+                            {prayer.status === 'active' ? (
+                                <Button variant="outline" size="sm" className="text-green-600 border-green-600/50 hover:bg-green-50" onClick={() => handleMarkAnswered(prayer.id)}>
                                     <CheckCircle className="h-4 w-4 mr-2" />
                                     Mark as Answered
+                                </Button>
+                            ) : (
+                                <Button variant="ghost" size="sm" disabled className="text-green-600">
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    Answered
                                 </Button>
                             )}
                         </CardFooter>
@@ -153,6 +158,9 @@ export default function PrayerWalkPage() {
         </div>
     );
   }
+
+  const currentPrayer = sessionPrayers[currentIndex];
+  const progress = ((currentIndex + 1) / sessionPrayers.length) * 100;
 
   return (
     <div className="flex flex-col h-screen bg-background p-4 md:p-8">
