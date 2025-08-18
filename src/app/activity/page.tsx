@@ -235,7 +235,7 @@ export function ActivityPage() {
                     </div>
 
                     <Card>
-                        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <CardContent className="p-4 flex flex-wrap items-center justify-around gap-4">
                            <StatCard title="Prayers Added" value={dailyStats.prayersAdded?.toString() || '0'} icon={PlusCircle} />
                            <StatCard title="Prayer Time" value={dailyStats.prayerTime?.toString() || '0'} goal={`${goal.dailyPrayerTime} min`} icon={Clock} />
                            <StatCard title="Answered" value={dailyStats.answeredPrayers?.toString() || '0'} icon={CheckCircle} />
