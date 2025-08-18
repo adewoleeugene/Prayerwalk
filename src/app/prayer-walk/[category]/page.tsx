@@ -7,11 +7,14 @@ import { Prayer } from '@/lib/types';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Square, Loader2, CheckCircle, Edit } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Square, Loader2, CheckCircle, Edit, Timer } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { PrayerFormDialog } from '@/components/prayer-form-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+
+const DEFAULT_TIME_PER_PRAYER = 5 * 60; // 5 minutes in seconds
 
 export default function PrayerWalkPage() {
   const router = useRouter();
@@ -23,7 +26,7 @@ export default function PrayerWalkPage() {
   const { toast } = useToast();
   const [sessionPrayers, setSessionPrayers] = useState<Prayer[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [elapsedTime, setElapsedTime] = useState(0);
+  const [remainingTime, setRemainingTime] = useState(DEFAULT_TIME_PER_PRAYER);
   const [sessionTitle, setSessionTitle] = useState("Prayer Walk");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedPrayer, setSelectedPrayer] = useState<Prayer | undefined>(undefined);
@@ -33,7 +36,6 @@ export default function PrayerWalkPage() {
       let filtered: Prayer[] = [];
       if (categoryId === 'shuffle') {
         const allActive = prayers.filter(p => p.status === 'active');
-        // Simple shuffle algorithm
         filtered = allActive.sort(() => Math.random() - 0.5);
         setSessionTitle("Shuffled Prayer Walk");
       } else if (categoryId === 'custom') {
@@ -49,24 +51,109 @@ export default function PrayerWalkPage() {
         setSessionTitle(`${category?.name || 'Category'} Prayer Walk`);
       }
       setSessionPrayers(filtered);
+      if (filtered.length > 0) {
+        setRemainingTime(DEFAULT_TIME_PER_PRAYER);
+      }
     }
   }, [isLoaded, prayers, categories, categoryId, searchParams]);
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setElapsedTime(prev => prev + 1);
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+    if (remainingTime > 0) {
+        const timer = setInterval(() => {
+            setRemainingTime(prev => prev - 1);
+        }, 1000);
+        return () => clearInterval(timer);
+    } else if (sessionPrayers.length > 0) {
+        goNext();
+    }
+  }, [remainingTime, sessionPrayers.length]);
   
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = (seconds % 60).toString().padStart(2, '0');
-    if (mins > 0) {
-        return `${mins}m ${secs}s`;
-    }
-    return `${secs}s`;
+    return `${mins}:${secs}`;
   }
+
+  const addTime = (seconds: number) => {
+      setRemainingTime(prev => prev + seconds);
+  }
+
+  const goNext = () => {
+    if (currentIndex < sessionPrayers.length - 1) {
+        setCurrentIndex(prev => prev + 1);
+        setRemainingTime(DEFAULT_TIME_PER_PRAYER);
+    } else {
+        setCurrentIndex(prev => prev + 1); // Go to complete screen
+    }
+  };
+  
+  const goPrev = () => {
+      if (currentIndex > 0) {
+        setCurrentIndex(prev => prev - 1);
+        setRemainingTime(DEFAULT_TIME_PER_PRAYER);
+      }
+  };
+
+  const handleEditClick = (prayer: Prayer) => {
+    setSelectedPrayer(prayer);
+    setIsFormOpen(true);
+  }
+
+  const handleMarkAnswered = (prayerId: string) => {
+      togglePrayerStatus(prayerId);
+      const prayer = sessionPrayers.find(p => p.id === prayerId);
+      if (prayer) {
+        toast({
+            title: "Prayer Answered!",
+            description: `"${prayer.title}" has been marked as answered.`
+        });
+        setSessionPrayers(prev => prev.map(p => p.id === prayerId ? { ...p, status: 'answered' } : p));
+      }
+  }
+
+  const SessionCompleteContent = () => (
+     <>
+        <AlertDialogHeader>
+            <AlertDialogTitle className="text-center text-3xl font-bold font-headline">Prayer Walk Complete!</AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+                You prayed through {currentIndex > sessionPrayers.length ? sessionPrayers.length : currentIndex} prayer points.
+            </AlertDialogDescription>
+        </AlertDialogHeader>
+
+        <ScrollArea className="max-h-[50vh]">
+            <main className="p-4 md:p-6 space-y-4">
+                {sessionPrayers.slice(0, currentIndex).map(prayer => (
+                    <Card key={prayer.id} className="shadow-sm">
+                        <CardHeader className="p-4">
+                            <CardTitle className="text-md">{prayer.title}</CardTitle>
+                        </CardHeader>
+                        <CardFooter className="flex justify-end gap-2 p-2">
+                            <Button variant="outline" size="sm" onClick={() => handleEditClick(prayer)}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Add Note
+                            </Button>
+                            {prayer.status === 'active' ? (
+                                <Button variant="outline" size="sm" className="text-green-600 border-green-600/50 hover:bg-green-50" onClick={() => handleMarkAnswered(prayer.id)}>
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    Answered
+                                </Button>
+                            ) : (
+                                <Button variant="ghost" size="sm" disabled className="text-green-600">
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    Answered
+                                </Button>
+                            )}
+                        </CardFooter>
+                    </Card>
+                ))}
+            </main>
+        </ScrollArea>
+
+        <AlertDialogFooter>
+            <AlertDialogAction onClick={() => router.push('/')} className="w-full">Finish</AlertDialogAction>
+        </AlertDialogFooter>
+    </>
+  )
 
   if (!isLoaded) {
     return (
@@ -86,75 +173,17 @@ export default function PrayerWalkPage() {
       );
   }
 
-  const goNext = () => setCurrentIndex(prev => (prev + 1));
-  const goPrev = () => setCurrentIndex(prev => (prev - 1));
-
-  const handleEditClick = (prayer: Prayer) => {
-    setSelectedPrayer(prayer);
-    setIsFormOpen(true);
-  }
-
-  const handleMarkAnswered = (prayerId: string) => {
-      togglePrayerStatus(prayerId);
-      const prayer = sessionPrayers.find(p => p.id === prayerId);
-      if (prayer) {
-        toast({
-            title: "Prayer Answered!",
-            description: `"${prayer.title}" has been marked as answered.`
-        });
-        // Visually update the prayer in the session complete list
-        setSessionPrayers(prev => prev.map(p => p.id === prayerId ? { ...p, status: 'answered' } : p));
-      }
-  }
-
   if (currentIndex >= sessionPrayers.length) {
     return (
-        <div className="flex flex-col h-screen bg-background">
-          <header className="p-4 text-center border-b">
-            <h1 className="text-3xl font-bold font-headline">Prayer Walk Complete!</h1>
-            <p className="text-muted-foreground mt-2">
-              You prayed for {formatTime(elapsedTime)} through {sessionPrayers.length} prayer points.
-            </p>
-          </header>
-
-          <ScrollArea className="flex-1">
-            <main className="p-4 md:p-6 space-y-4">
-                {sessionPrayers.map(prayer => (
-                    <Card key={prayer.id} className="shadow-sm">
-                        <CardHeader>
-                            <CardTitle className="text-lg">{prayer.title}</CardTitle>
-                        </CardHeader>
-                        <CardFooter className="flex justify-end gap-2">
-                             <Button variant="outline" size="sm" onClick={() => handleEditClick(prayer)}>
-                                <Edit className="h-4 w-4 mr-2" />
-                                Add Note / Edit
-                            </Button>
-                            {prayer.status === 'active' ? (
-                                <Button variant="outline" size="sm" className="text-green-600 border-green-600/50 hover:bg-green-50" onClick={() => handleMarkAnswered(prayer.id)}>
-                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                    Mark as Answered
-                                </Button>
-                            ) : (
-                                <Button variant="ghost" size="sm" disabled className="text-green-600">
-                                    <CheckCircle className="h-4 w-4 mr-2" />
-                                    Answered
-                                </Button>
-                            )}
-                        </CardFooter>
-                    </Card>
-                ))}
-            </main>
-          </ScrollArea>
-          
-          <footer className="p-4 border-t bg-background">
-            <Button onClick={() => router.push('/')} className="w-full" size="lg">Finish</Button>
-          </footer>
-          
-          <PrayerFormDialog 
-            open={isFormOpen} 
-            onOpenChange={setIsFormOpen} 
-            prayerToEdit={selectedPrayer}
-          />
+        <div className="flex flex-col h-screen bg-background items-center justify-center">
+            <div className="w-full max-w-lg p-4">
+                <SessionCompleteContent />
+            </div>
+            <PrayerFormDialog 
+                open={isFormOpen} 
+                onOpenChange={setIsFormOpen} 
+                prayerToEdit={selectedPrayer}
+            />
         </div>
     );
   }
@@ -166,10 +195,13 @@ export default function PrayerWalkPage() {
     <div className="flex flex-col h-screen bg-background p-4 md:p-8">
       <header className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold font-headline">{sessionTitle}</h1>
-        <div className="text-lg font-semibold tabular-nums">{formatTime(elapsedTime)}</div>
+        <div className="text-lg font-semibold tabular-nums flex items-center gap-2">
+            <Timer className="h-5 w-5" />
+            {formatTime(remainingTime)}
+        </div>
       </header>
 
-      <Progress value={progress} className="w-full mb-8" />
+      <Progress value={progress} className="w-full mb-4" />
       
       <main className="flex-1 flex items-center justify-center">
         <Card className="w-full max-w-2xl shadow-xl animate-in fade-in zoom-in-95">
@@ -189,15 +221,32 @@ export default function PrayerWalkPage() {
         </Card>
       </main>
 
-      <footer className="grid grid-cols-3 items-center gap-4 mt-8">
+       <div className="grid grid-cols-5 gap-2 my-4">
+            <Button variant="outline" size="sm" onClick={() => addTime(30)}>+30s</Button>
+            <Button variant="outline" size="sm" onClick={() => addTime(60)}>+1m</Button>
+            <Button variant="outline" size="sm" onClick={() => addTime(180)}>+3m</Button>
+            <Button variant="outline" size="sm" onClick={() => addTime(300)}>+5m</Button>
+            <Button variant="outline" size="sm" onClick={() => addTime(600)}>+10m</Button>
+       </div>
+
+      <footer className="grid grid-cols-3 items-center gap-4 mt-auto">
         <Button variant="outline" size="lg" onClick={goPrev} disabled={currentIndex === 0}>
           <ChevronLeft className="h-6 w-6 md:mr-2"/>
           <span className="hidden md:inline">Prev</span>
         </Button>
-        <Button variant="destructive" size="lg" onClick={() => router.back()}>
-          <Square className="h-5 w-5 md:mr-2" />
-          <span className="hidden md:inline">End Walk</span>
-        </Button>
+        
+        <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <Button variant="destructive" size="lg">
+                    <Square className="h-5 w-5 md:mr-2" />
+                    <span className="hidden md:inline">End Walk</span>
+                </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <SessionCompleteContent />
+            </AlertDialogContent>
+        </AlertDialog>
+
         <Button size="lg" onClick={goNext}>
           <span className="hidden md:inline">{currentIndex === sessionPrayers.length - 1 ? "Finish" : "Next"}</span>
           <ChevronRight className="h-6 w-6 md:ml-2" />
