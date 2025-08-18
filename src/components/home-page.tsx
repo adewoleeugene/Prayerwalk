@@ -48,20 +48,25 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   }, []);
   
   useEffect(() => {
-    if(isLoaded && prayers.length > 0) {
-      setShowRecentActivity(true);
+    if(isLoaded && prayers.length > 0 && showRecentActivity) {
       const recentPrayers = prayers.filter(p => p.status === 'active').slice(0, 10);
       const answeredPrayers = prayers.filter(p => p.status === 'answered').slice(0, 10);
 
-      analyzePrayerActivity({ recentPrayers, answeredPrayers, categories })
-        .then(setAnalysis)
-        .catch(console.error)
-        .finally(() => setIsLoadingAnalysis(false));
+      if (recentPrayers.length > 0 || answeredPrayers.length > 0) {
+        setIsLoadingAnalysis(true);
+        analyzePrayerActivity({ recentPrayers, answeredPrayers, categories })
+          .then(setAnalysis)
+          .catch(console.error)
+          .finally(() => setIsLoadingAnalysis(false));
+      } else {
+         setIsLoadingAnalysis(false);
+         setAnalysis(null);
+      }
     } else if (isLoaded) {
       setIsLoadingAnalysis(false);
-      setShowRecentActivity(false);
+      setAnalysis(null);
     }
-  }, [isLoaded, prayers, categories]);
+  }, [isLoaded, prayers, categories, showRecentActivity]);
 
   const handleClearActivity = () => {
     setAnalysis(null);
