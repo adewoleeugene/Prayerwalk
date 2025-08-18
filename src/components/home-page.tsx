@@ -15,7 +15,7 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import type { View } from '@/app/page';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { format, subDays } from 'date-fns';
+import { format, subDays, isToday } from 'date-fns';
 import { analyzePrayerActivity, AnalyzePrayerActivityOutput } from '@/ai/flows/analyze-prayer-activity';
 import { useJournalStore } from '@/hooks/use-journal-store';
 
@@ -23,6 +23,13 @@ import { useJournalStore } from '@/hooks/use-journal-store';
 type HomePageProps = {
   onCaptureClick: () => void;
   setView: (view: View) => void;
+};
+
+const VERSE_STORAGE_KEY = 'praysmart-daily-verse';
+
+type StoredVerse = {
+  date: string; // ISO date string
+  verse: DailyVerse;
 };
 
 export function HomePage({ onCaptureClick, setView }: HomePageProps) {
@@ -43,17 +50,43 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
     else if (hours < 18) setGreeting('Good afternoon');
     else setGreeting('Good evening');
 
-    getDailyVerse()
-      .then(setDailyVerse)
-      .catch(console.error)
-      .finally(() => setIsLoadingVerse(false));
+    const fetchOrLoadVerse = async () => {
+        const todayStr = new Date().toISOString().split('T')[0];
+        try {
+            const storedItem = localStorage.getItem(VERSE_STORAGE_KEY);
+            if (storedItem) {
+                const storedVerse: StoredVerse = JSON.parse(storedItem);
+                if (storedVerse.date === todayStr) {
+                    setDailyVerse(storedVerse.verse);
+                    setIsLoadingVerse(false);
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error("Failed to load verse from localStorage", error);
+        }
+
+        // If no valid stored verse, fetch a new one
+        try {
+            const verse = await getDailyVerse();
+            setDailyVerse(verse);
+            localStorage.setItem(VERSE_STORAGE_KEY, JSON.stringify({ date: todayStr, verse }));
+        } catch (error) {
+            console.error("Failed to fetch daily verse:", error);
+            // Don't clear a stale verse if the fetch fails, just show the old one.
+        } finally {
+            setIsLoadingVerse(false);
+        }
+    };
+    
+    fetchOrLoadVerse();
   }, []);
 
   useEffect(() => {
-    if (isPrayerStoreLoaded) {
+    if (isPrayerStoreLoaded && isJournalStoreLoaded) {
       const oneWeekAgo = subDays(new Date(), 7);
-      const recentPrayers = prayers.filter(p => new Date(p.createdAt) > oneWeekAgo && p.status === 'active');
-      const answeredPrayers = prayers.filter(p => new Date(p.createdAt) > oneWeekAgo && p.status === 'answered');
+      const recentPrayers = prayers.filter(p => new Date(p.createdAt) > oneWeekAgo);
+      const answeredPrayers = prayers.filter(p => p.status === 'answered' && new Date(p.createdAt) > oneWeekAgo);
 
       if (recentPrayers.length > 0 || answeredPrayers.length > 0) {
         setIsLoadingAnalysis(true);
@@ -72,7 +105,7 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
         setAnalysis(null);
       }
     }
-  }, [isPrayerStoreLoaded, prayers, categories]);
+  }, [isPrayerStoreLoaded, isJournalStoreLoaded, prayers, categories]);
   
   
   const lastPrayer = prayers.length > 0 ? prayers[0] : null;
@@ -158,7 +191,7 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
                           </div>
                       </div>
                   </CardHeader>
-                  {(isLoadingAnalysis || analysis) && (
+                  {(isLoadingAnalysis || analysis?.summary) && (
                     <CardContent>
                         <h3 className="font-semibold text-md mb-2">Weekly Analysis</h3>
                         {isLoadingAnalysis ? (
