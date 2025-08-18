@@ -15,7 +15,9 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import type { View } from '@/app/page';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { formatDistanceToNow, format } from 'date-fns';
+import { format, subDays, formatDistanceToNow } from 'date-fns';
+import { analyzePrayerActivity, AnalyzePrayerActivityOutput } from '@/ai/flows/analyze-prayer-activity';
+import { PrayerChart } from './prayer-chart';
 
 
 type HomePageProps = {
@@ -25,12 +27,14 @@ type HomePageProps = {
 
 export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const { user } = useAuth();
-  const { prayers, isLoaded } = usePrayerStore();
+  const { prayers, categories, isLoaded } = usePrayerStore();
   const [greeting, setGreeting] = useState('');
   const [dailyVerse, setDailyVerse] = useState<DailyVerse | null>(null);
   const [isLoadingVerse, setIsLoadingVerse] = useState(true);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [showRecentActivity, setShowRecentActivity] = useState(true);
+  const [analysis, setAnalysis] = useState<AnalyzePrayerActivityOutput | null>(null);
+  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -44,10 +48,34 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
       .catch(console.error)
       .finally(() => setIsLoadingVerse(false));
   }, []);
+
+  useEffect(() => {
+    if (isLoaded && showRecentActivity) {
+      const oneWeekAgo = subDays(new Date(), 7);
+      const recentPrayers = prayers.filter(p => new Date(p.createdAt) > oneWeekAgo && p.status === 'active');
+      const answeredPrayers = prayers.filter(p => new Date(p.createdAt) > oneWeekAgo && p.status === 'answered');
+
+      if (recentPrayers.length > 0 || answeredPrayers.length > 0) {
+        setIsLoadingAnalysis(true);
+        analyzePrayerActivity({
+          recentPrayers,
+          answeredPrayers,
+          categories
+        }).then(setAnalysis).catch(err => {
+          console.error("Failed to analyze prayer activity", err);
+          setAnalysis(null);
+        }).finally(() => {
+          setIsLoadingAnalysis(false);
+        });
+      } else {
+        setIsLoadingAnalysis(false);
+        setAnalysis(null);
+      }
+    }
+  }, [isLoaded, prayers, categories, showRecentActivity]);
   
   const handleClearActivity = () => {
     setShowRecentActivity(false);
-    // In a real app, you might want to clear this from localStorage or a backend
     toast({
       title: "Activity Cleared",
       description: "Your recent activity has been cleared from the dashboard.",
@@ -56,10 +84,9 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   
   const lastPrayer = prayers.length > 0 ? prayers[0] : null;
   const lastPrayerTime = lastPrayer ? new Date(lastPrayer.createdAt) : null;
-  const formattedLastPrayer = lastPrayerTime ? `${formatDistanceToNow(lastPrayerTime, { addSuffix: true })}` : 'N/A';
   
-  // Mocked duration for demonstration
-  const lastSessionDuration = "30 minutes";
+  // Mocked duration for demonstration - will default to 0
+  const lastSessionDuration = "0 minutes";
 
 
   const recentPrayersForDisplay = showRecentActivity ? prayers.filter(p => p.status === 'active').slice(0, 3) : [];
@@ -158,6 +185,31 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
                     </CardContent>
                 </Card>
               </div>
+
+              {isLoadingAnalysis ? (
+                 <Card className="mt-4 shadow-md"><CardContent className="p-4"><Skeleton className="h-20 w-full" /></CardContent></Card>
+              ) : analysis && (
+                <>
+                    <Card className="mt-4 shadow-md">
+                        <CardHeader>
+                            <CardTitle className="text-lg">Weekly Analysis</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-sm text-muted-foreground">{analysis.summary}</p>
+                        </CardContent>
+                    </Card>
+                    {analysis.categoryDistribution.length > 0 && (
+                        <Card className="mt-4 shadow-md">
+                            <CardHeader>
+                                <CardTitle className="text-lg">Category Breakdown</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <PrayerChart data={analysis.categoryDistribution} />
+                            </CardContent>
+                        </Card>
+                    )}
+                </>
+              )}
             </div>
           )}
           
