@@ -262,6 +262,7 @@ export default function PrayerWalkPage() {
   const progress = ((currentIndex + 1) / sessionPrayers.length) * 100;
   
   if (!currentPrayer) {
+      // This state can happen briefly when session prayers are being loaded
       return (
           <div className="flex flex-col items-center justify-center h-screen gap-4">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
