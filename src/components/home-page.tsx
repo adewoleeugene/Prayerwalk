@@ -58,7 +58,7 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
     }
   }, [isLoaded, prayers, categories]);
 
-  const recentPrayersForDisplay = prayers.slice(0, 3);
+  const recentPrayersForDisplay = prayers.filter(p => p.status === 'active').slice(0, 3);
   const userName = user?.displayName || user?.email?.split('@')[0] || 'friend';
   const userInitial = (user?.displayName || user?.email || 'U').charAt(0).toUpperCase();
 

@@ -2,21 +2,14 @@
 "use client";
 
 import React from 'react';
-import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Footprints } from 'lucide-react';
-import { getIcon } from '@/components/icons';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { ArrowLeft, Library, Shuffle, ListVideo } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 export function PrayerWalkLobby() {
   const router = useRouter();
-  const { categories, prayers, isLoaded } = usePrayerStore();
-
-  const activeCategories = categories.filter(category => 
-    prayers.some(p => p.categoryId === category.id && p.status === 'active')
-  );
 
   return (
     <div className="flex flex-col h-screen">
@@ -31,43 +24,44 @@ export function PrayerWalkLobby() {
       <ScrollArea className="flex-1">
         <main className="p-4 md:p-6">
           <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold font-headline">Choose a Category</h2>
-            <p className="text-muted-foreground">Select a category to begin your guided prayer walk.</p>
+            <h2 className="text-2xl font-bold font-headline">Choose a Mode</h2>
+            <p className="text-muted-foreground">How would you like to begin your prayer session?</p>
           </div>
 
-          {isLoaded && activeCategories.length > 0 ? (
-            <div className="space-y-4">
-              {activeCategories.map(category => {
-                const Icon = getIcon(category.icon);
-                const prayerCount = prayers.filter(p => p.categoryId === category.id && p.status === 'active').length;
-                return (
-                  <Card 
-                    key={category.id} 
-                    className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer"
-                    onClick={() => router.push(`/prayer-walk/${category.id}`)}
-                  >
-                    <CardContent className="p-4 flex items-center justify-between">
-                      <div className="flex items-center gap-4">
-                        <div className="p-2 bg-primary/10 rounded-lg">
-                          <Icon className="h-6 w-6 text-primary" />
-                        </div>
-                        <div>
-                          <h3 className="text-lg font-semibold">{category.name}</h3>
-                          <p className="text-sm text-muted-foreground">{prayerCount} prayer(s)</p>
-                        </div>
-                      </div>
-                      <Footprints className="h-6 w-6 text-primary" />
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-[calc(100vh-250px)] text-center text-muted-foreground">
-              <p className="text-lg font-medium">No active prayers found.</p>
-              <p className="text-sm">Add some prayer points to a category to start a prayer walk.</p>
-            </div>
-          )}
+          <div className="space-y-4">
+            <Card 
+              className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+              onClick={() => router.push(`/prayer-walk/category`)}
+            >
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-3">
+                      <Library className="h-6 w-6 text-primary" />
+                      Pray by Category
+                  </CardTitle>
+                  <CardDescription>A quick, focused session on one of your categories.</CardDescription>
+              </CardHeader>
+            </Card>
+
+             <Card className="shadow-md bg-muted/50 cursor-not-allowed">
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-3 text-muted-foreground">
+                      <ListVideo className="h-6 w-6" />
+                      Create Custom Session
+                  </CardTitle>
+                  <CardDescription>Build a prayer "playlist" from multiple categories. (Coming Soon)</CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="shadow-md bg-muted/50 cursor-not-allowed">
+              <CardHeader>
+                  <CardTitle className="flex items-center gap-3 text-muted-foreground">
+                      <Shuffle className="h-6 w-6" />
+                      Guided Walk (Shuffle)
+                  </CardTitle>
+                  <CardDescription>Let the app create a randomized prayer list for you. (Coming Soon)</CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
         </main>
       </ScrollArea>
     </div>
