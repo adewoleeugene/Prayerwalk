@@ -75,24 +75,28 @@ export default function PrayerWalkPage() {
   }, [isLoaded, prayers, categories, categoryId, searchParams]);
 
   useEffect(() => {
-    if (!isSessionActive) return;
+    let elapsedTimer: NodeJS.Timeout;
+    let remainingTimer: NodeJS.Timeout;
 
-    const elapsedTimer = setInterval(() => {
-        setElapsedTime(prev => prev + 1);
-    }, 1000)
+    if (isSessionActive) {
+      elapsedTimer = setInterval(() => {
+          setElapsedTime(prev => prev + 1);
+      }, 1000);
 
-    const remainingTimer = setInterval(() => {
-        setRemainingTime(prev => {
-            if (prev > 0) return prev - 1;
-            return 0;
-        });
-    }, 1000);
+      remainingTimer = setInterval(() => {
+          setRemainingTime(prev => {
+              if (prev > 0) return prev - 1;
+              return 0;
+          });
+      }, 1000);
+    }
 
     return () => {
         clearInterval(elapsedTimer);
         clearInterval(remainingTimer);
     };
   }, [isSessionActive]);
+
 
   useEffect(() => {
       if (remainingTime <= 0 && isSessionActive) {
@@ -314,5 +318,3 @@ export default function PrayerWalkPage() {
     </div>
   );
 }
-
-    
