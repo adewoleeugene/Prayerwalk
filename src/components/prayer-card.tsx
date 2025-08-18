@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState } from 'react';
@@ -51,33 +52,56 @@ export function PrayerCard({ prayer }: PrayerCardProps) {
         <CardFooter className="flex justify-between items-center">
           {category ? <Badge variant="secondary">{category.name}</Badge> : <div />}
           <div className="flex gap-1">
-            {prayer.status === 'active' && (
+            {prayer.status === 'active' ? (
               <Button variant="ghost" size="icon" onClick={handleToggleStatus} aria-label="Mark as answered">
                 <CheckCircle className="h-5 w-5 text-green-600 hover:text-green-500" />
               </Button>
+            ) : (
+                <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Remove
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will permanently remove this answered prayer.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => deletePrayer(prayer.id)}>Remove</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             )}
             <Button variant="ghost" size="icon" onClick={() => setIsFormOpen(true)} aria-label="Edit prayer">
               <Edit className="h-5 w-5" />
             </Button>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Delete prayer">
-                  <Trash2 className="h-5 w-5 text-destructive" />
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This action cannot be undone. This will permanently delete this prayer point.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => deletePrayer(prayer.id)}>Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            {prayer.status === 'active' && (
+                <AlertDialog>
+                <AlertDialogTrigger asChild>
+                    <Button variant="ghost" size="icon" aria-label="Delete prayer">
+                    <Trash2 className="h-5 w-5 text-destructive" />
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete this prayer point.
+                    </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => deletePrayer(prayer.id)}>Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+                </AlertDialog>
+            )}
           </div>
         </CardFooter>
       </Card>
