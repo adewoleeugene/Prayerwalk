@@ -298,8 +298,8 @@ export function ActivityPage() {
                     <PrayerActivityChart hourlyData={hourlyData} />
                     
                     <div>
-                        <h2 className="text-lg font-bold font-headline mb-2">Journal History</h2>
-                        <JournalList />
+                        <h2 className="text-lg font-bold font-headline mb-2">Journal History for {format(selectedDate, 'MMMM d')}</h2>
+                        <JournalList filterDate={selectedDate} />
                     </div>
                 </main>
             </ScrollArea>
@@ -308,5 +308,3 @@ export function ActivityPage() {
 }
 
 export default ActivityPage;
-
-    

@@ -7,7 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Trash2, ArrowLeft } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
@@ -109,9 +109,16 @@ export function JournalEntryCard({ entry }: { entry: JournalEntry }) {
   );
 }
 
-export function JournalList() {
+export function JournalList({ filterDate }: { filterDate?: Date }) {
     const { entries, isLoaded: isJournalLoaded } = useJournalStore();
     
+    const filteredEntries = React.useMemo(() => {
+        if (!filterDate) {
+            return entries;
+        }
+        return entries.filter(entry => isSameDay(new Date(entry.createdAt), filterDate));
+    }, [entries, filterDate]);
+
     if (!isJournalLoaded) {
         return (
            <div className="space-y-4">
@@ -122,18 +129,18 @@ export function JournalList() {
         );
     }
 
-    if (entries.length === 0) {
+    if (filteredEntries.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-[calc(100vh-400px)] text-center text-muted-foreground">
-              <p className="text-lg font-medium">Your Journal is Empty</p>
-              <p className="text-sm">Use the 'Take Note' button to start capturing your thoughts.</p>
+              <p className="text-lg font-medium">No Journal Entries for this day</p>
+              <p className="text-sm">Use the 'Take Note' button to capture your thoughts.</p>
             </div>
         );
     }
 
     return (
         <div className="space-y-4">
-        {entries.map(entry => (
+        {filteredEntries.map(entry => (
           <JournalEntryCard key={entry.id} entry={entry} />
         ))}
       </div>
