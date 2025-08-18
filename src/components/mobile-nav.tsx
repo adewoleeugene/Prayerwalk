@@ -2,7 +2,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Activity, Home, Library, Settings, Sparkles } from "lucide-react";
+import { Activity, Home, Library, Settings, Sparkles, NotebookText } from "lucide-react";
 import type { View } from "@/app/page";
 
 type MobileNavProps = {

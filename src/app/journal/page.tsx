@@ -9,12 +9,13 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Trash2, ArrowLeft } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { JournalEntry } from '@/lib/types';
+import { useRouter } from 'next/navigation';
 
 export function JournalEntryCard({ entry }: { entry: JournalEntry }) {
   const { deleteJournalEntry, updateJournalEntryNotes } = useJournalStore();
@@ -138,3 +139,25 @@ export function JournalList() {
       </div>
     );
 }
+
+export function JournalPage() {
+    const router = useRouter();
+    return (
+      <>
+        <header className="flex items-center p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+          <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
+              <ArrowLeft />
+          </Button>
+          <h1 className="text-xl font-bold font-headline mx-auto">Journal</h1>
+          <div className="w-10" />
+        </header>
+        <ScrollArea className="h-[calc(100vh-129px)] md:h-[calc(100vh-65px)]">
+          <main className="p-4 md:p-6 space-y-6">
+              <JournalList />
+          </main>
+        </ScrollArea>
+      </>
+    );
+  }
+  
+  export default JournalPage;

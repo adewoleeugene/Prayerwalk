@@ -8,6 +8,9 @@ import { useJournalStore } from '@/hooks/use-journal-store';
 import { format, subDays, startOfDay, eachDayOfInterval, isSameDay } from 'date-fns';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 import { JournalList } from '../journal/page';
+import { ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 
 const ChartTooltipContent = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -64,10 +67,16 @@ function PrayerActivityChart() {
 }
 
 export function ActivityPage() {
+  const router = useRouter();
+  
   return (
     <>
       <header className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+        <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
+            <ArrowLeft />
+        </Button>
         <h1 className="text-xl font-bold font-headline">My Activity</h1>
+        <div className="w-10" />
       </header>
       <ScrollArea className="h-[calc(100vh-129px)] md:h-[calc(100vh-65px)]">
         <main className="p-4 md:p-6 space-y-6">

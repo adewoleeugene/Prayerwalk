@@ -14,11 +14,13 @@ import { HomePage } from "@/components/home-page";
 import ProfilePage from "./profile/page";
 import PrayerWalkLobby from "./prayer-walk/page";
 import { ActivityPage } from "./activity/page";
+import { JournalPage } from "./journal/page";
 
 export type View = 
   | { type: 'home' } 
   | { type: 'library' }
   | { type: 'activity' }
+  | { type: 'journal' }
   | { type: 'settings' }
   | { type: 'profile' }
   | { type: 'prayer-walk' };
@@ -51,6 +53,8 @@ export default function Home() {
         return <Dashboard onCaptureClick={() => setIsCaptureDialogOpen(true)} />;
       case 'activity':
         return <ActivityPage />;
+      case 'journal':
+        return <JournalPage />;
       case 'settings':
         return <SettingsPage setView={setView} />;
       case 'profile':

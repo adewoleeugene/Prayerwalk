@@ -87,7 +87,7 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const lastPrayerTime = lastPrayer ? new Date(lastPrayer.createdAt) : null;
   
   const lastSessionDurationFormatted = (() => {
-    if (lastSessionDuration === null || lastSessionDuration === undefined) return ["0", "minutes"];
+    if (!lastSessionDuration) return ["0", "minutes"];
     const minutes = Math.floor(lastSessionDuration / 60);
     const unit = minutes === 1 ? 'minute' : 'minutes';
     return [minutes.toString(), unit];
@@ -148,33 +148,10 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
             </Button>
           </div>
           
-          {/* Recent Activity */}
-          { showRecentActivity && (
-            <div>
-              <div className="flex justify-between items-center mb-2">
-                <h2 className="text-lg font-bold font-headline">Recent Activity</h2>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" aria-label="Clear activity">
-                        <Trash2 className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                      <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                              This action will clear your recent activity summary and recent prayer points from this dashboard view. It will not delete any of your prayer data.
-                          </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleClearActivity}>Clear</AlertDialogAction>
-                      </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-
-               <Card className="shadow-md cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setView({ type: 'activity' })}>
+           {/* Recent Activity Card */}
+           <div className="space-y-2">
+              <h2 className="text-lg font-bold font-headline">Recent Activity</h2>
+              <Card className="shadow-md cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setView({ type: 'activity' })}>
                   <CardContent className="p-4 flex items-center justify-between">
                     <div className="grid grid-cols-2 gap-6 w-full">
                        <div>
@@ -191,23 +168,7 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
                     <ArrowRight className="h-5 w-5 text-muted-foreground" />
                   </CardContent>
               </Card>
-
-              {isLoadingAnalysis ? (
-                 <Card className="mt-4 shadow-md"><CardContent className="p-4"><Skeleton className="h-20 w-full" /></CardContent></Card>
-              ) : analysis && (
-                <>
-                    <Card className="mt-4 shadow-md">
-                        <CardHeader>
-                            <CardTitle className="text-lg">Weekly Analysis</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <p className="text-sm text-muted-foreground">{analysis.summary}</p>
-                        </CardContent>
-                    </Card>
-                </>
-              )}
             </div>
-          )}
           
           {/* Recent Prayer Points */}
           <div>
