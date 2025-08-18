@@ -33,6 +33,7 @@ export default function PrayerWalkPage() {
   const [timePerPrayer, setTimePerPrayer] = useState(300); // default 5 mins
   const [remainingTime, setRemainingTime] = useState(timePerPrayer);
   const [isSessionActive, setIsSessionActive] = useState(false);
+  const [isSessionEnded, setIsSessionEnded] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
 
   React.useEffect(() => {
@@ -78,7 +79,7 @@ export default function PrayerWalkPage() {
     let elapsedTimer: NodeJS.Timeout;
     let remainingTimer: NodeJS.Timeout;
 
-    if (isSessionActive) {
+    if (isSessionActive && !isSessionEnded) {
       elapsedTimer = setInterval(() => {
           setElapsedTime(prev => prev + 1);
       }, 1000);
@@ -95,7 +96,7 @@ export default function PrayerWalkPage() {
         clearInterval(elapsedTimer);
         clearInterval(remainingTimer);
     };
-  }, [isSessionActive]);
+  }, [isSessionActive, isSessionEnded]);
 
 
   useEffect(() => {
@@ -160,21 +161,22 @@ export default function PrayerWalkPage() {
 
   const handleEndSession = () => {
     setIsSessionActive(false);
+    setIsSessionEnded(true);
   };
   
   const SessionCompleteContent = () => {
       return (
         <>
-            <AlertDialogHeader>
-                <AlertDialogTitle className="text-center text-3xl font-bold font-headline">Prayer Walk Complete!</AlertDialogTitle>
-                <AlertDialogDescription className="text-center">
-                    You prayed for {formatTime(elapsedTime)} through {Math.min(currentIndex, sessionPrayers.length)} prayer point(s).
+             <AlertDialogHeader className="text-center p-4 border-b">
+                <AlertDialogTitle className="text-3xl font-bold font-headline">Prayer Walk Complete!</AlertDialogTitle>
+                <AlertDialogDescription className="mt-2">
+                     You prayed for {formatTime(elapsedTime)} through {Math.min(currentIndex + 1, sessionPrayers.length)} prayer point(s).
                 </AlertDialogDescription>
             </AlertDialogHeader>
 
-            <ScrollArea className="max-h-[50vh] -mx-6 px-6">
-                <main className="py-4 space-y-4">
-                    {sessionPrayers.slice(0, currentIndex).map(prayer => (
+            <ScrollArea className="max-h-[50vh] -mx-6 px-2">
+                <main className="py-4 space-y-4 px-4">
+                    {sessionPrayers.slice(0, currentIndex + 1).map(prayer => (
                         <Card key={prayer.id} className="shadow-sm">
                             <CardHeader className="p-4">
                                 <CardTitle className="text-md font-medium">{prayer.title}</CardTitle>
@@ -201,7 +203,7 @@ export default function PrayerWalkPage() {
                 </main>
             </ScrollArea>
 
-            <AlertDialogFooter>
+            <AlertDialogFooter className="p-4 border-t">
                 <AlertDialogAction onClick={() => {
                     handleEndSession();
                     router.push('/');
@@ -233,7 +235,7 @@ export default function PrayerWalkPage() {
     return (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <AlertDialog open>
-                <AlertDialogContent>
+                <AlertDialogContent className="p-0 gap-0">
                     <SessionCompleteContent />
                 </AlertDialogContent>
             </AlertDialog>
@@ -295,12 +297,12 @@ export default function PrayerWalkPage() {
         
         <AlertDialog>
             <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="lg">
+                <Button variant="destructive" size="lg" onClick={handleEndSession}>
                     <Square className="h-5 w-5 md:mr-2" />
                     <span className="hidden md:inline">End Walk</span>
                 </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent>
+            <AlertDialogContent className="p-0 gap-0">
                 <SessionCompleteContent />
             </AlertDialogContent>
         </AlertDialog>
@@ -318,3 +320,5 @@ export default function PrayerWalkPage() {
     </div>
   );
 }
+
+    
