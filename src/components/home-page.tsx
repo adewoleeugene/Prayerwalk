@@ -152,21 +152,33 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
            <div className="space-y-2">
               <h2 className="text-lg font-bold font-headline">Recent Activity</h2>
               <Card className="shadow-md cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setView({ type: 'activity' })}>
-                  <CardContent className="p-4 flex items-center justify-between">
-                    <div className="grid grid-cols-2 gap-6 w-full">
-                       <div>
-                          <p className="text-sm text-muted-foreground">Last Prayer</p>
-                          <p className="text-xl font-bold">{lastPrayerTime ? format(lastPrayerTime, 'p') : 'N/A'}</p>
-                          <p className="text-sm font-medium">{lastPrayerTime ? format(lastPrayerTime, 'eeee') : ''}</p>
-                       </div>
-                       <div>
-                          <p className="text-sm text-muted-foreground">Duration</p>
-                          <p className="text-2xl font-bold">{lastSessionDurationFormatted[0]}</p>
-                          <p className="text-sm font-medium capitalize">{lastSessionDurationFormatted[1]}</p>
+                  <CardHeader>
+                      <div className="grid grid-cols-2 gap-6 w-full">
+                          <div>
+                              <p className="text-sm text-muted-foreground">Last Prayer</p>
+                              <p className="text-xl font-bold">{lastPrayerTime ? format(lastPrayerTime, 'p') : 'N/A'}</p>
+                              <p className="text-sm font-medium">{lastPrayerTime ? format(lastPrayerTime, 'eeee') : ''}</p>
+                          </div>
+                          <div>
+                              <p className="text-sm text-muted-foreground">Duration</p>
+                              <p className="text-2xl font-bold">{lastSessionDurationFormatted[0]}</p>
+                              <p className="text-sm font-medium capitalize">{lastSessionDurationFormatted[1]}</p>
+                          </div>
                       </div>
-                    </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground" />
-                  </CardContent>
+                  </CardHeader>
+                  {(isLoadingAnalysis || analysis) && (
+                    <CardContent>
+                        <h3 className="font-semibold text-md mb-2">Weekly Analysis</h3>
+                        {isLoadingAnalysis ? (
+                            <div className="space-y-2">
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-5/6" />
+                            </div>
+                        ) : (
+                            <p className="text-sm text-muted-foreground">{analysis?.summary}</p>
+                        )}
+                    </CardContent>
+                  )}
               </Card>
             </div>
           
