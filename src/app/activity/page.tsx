@@ -252,19 +252,21 @@ export function ActivityPage() {
                         <CardContent className="space-y-4">
                             <div className="space-y-2">
                                 <Label htmlFor="daily-goal">Daily Prayer Time (minutes)</Label>
-                                <Input 
-                                    id="daily-goal" 
-                                    type="number" 
-                                    value={dailyGoal}
-                                    onChange={(e) => setDailyGoal(Number(e.target.value))}
-                                    placeholder="e.g., 30"
-                                    min="1"
-                                />
+                                <div className="flex items-center gap-2">
+                                    <Input 
+                                        id="daily-goal" 
+                                        type="number" 
+                                        value={dailyGoal}
+                                        onChange={(e) => setDailyGoal(Number(e.target.value))}
+                                        placeholder="e.g., 30"
+                                        min="1"
+                                    />
+                                    <Button onClick={handleSaveChanges} disabled={isSaving || !isPrayerLoaded}>
+                                        {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                        Save
+                                    </Button>
+                                </div>
                             </div>
-                            <Button onClick={handleSaveChanges} disabled={isSaving || !isPrayerLoaded}>
-                                {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                Save Goal
-                            </Button>
                         </CardContent>
                     </Card>
 
@@ -300,3 +302,5 @@ export function ActivityPage() {
 }
 
 export default ActivityPage;
+
+    
