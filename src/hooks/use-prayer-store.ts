@@ -2,11 +2,12 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Category, Prayer } from '@/lib/types';
+import { Category, Prayer, Goal } from '@/lib/types';
 import { suggestIcon } from '@/ai/flows/suggest-icon-flow';
 
 const PRAYERS_STORAGE_KEY = 'prayersmart-prayers';
 const CATEGORIES_STORAGE_KEY = 'prayersmart-categories';
+const GOAL_STORAGE_KEY = 'prayersmart-goal';
 
 const initialCategories: Category[] = [
   { id: 'family', name: 'Family', icon: 'Users' },
@@ -15,15 +16,21 @@ const initialCategories: Category[] = [
   { id: 'study', name: 'Study', icon: 'BookOpen' },
 ];
 
+const initialGoal: Goal = {
+    dailyPrayerTime: 30, // default 30 minutes
+};
+
 export const usePrayerStore = () => {
   const [prayers, setPrayers] = useState<Prayer[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [goal, setGoalState] = useState<Goal>(initialGoal);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     try {
       const storedPrayers = localStorage.getItem(PRAYERS_STORAGE_KEY);
       const storedCategories = localStorage.getItem(CATEGORIES_STORAGE_KEY);
+      const storedGoal = localStorage.getItem(GOAL_STORAGE_KEY);
 
       if (storedPrayers) {
         setPrayers(JSON.parse(storedPrayers));
@@ -39,9 +46,17 @@ export const usePrayerStore = () => {
       } else {
         setCategories(initialCategories);
       }
+      
+      if (storedGoal) {
+        setGoalState(JSON.parse(storedGoal));
+      } else {
+        setGoalState(initialGoal);
+      }
+
     } catch (error) {
       console.error("Failed to load data from localStorage", error);
       setCategories(initialCategories);
+      setGoalState(initialGoal);
     }
     setIsLoaded(true);
   }, []);
@@ -57,6 +72,12 @@ export const usePrayerStore = () => {
       localStorage.setItem(CATEGORIES_STORAGE_KEY, JSON.stringify(categories));
     }
   }, [categories, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      localStorage.setItem(GOAL_STORAGE_KEY, JSON.stringify(goal));
+    }
+  }, [goal, isLoaded]);
 
   const addPrayer = (prayer: Omit<Prayer, 'id' | 'createdAt' | 'status'>) => {
     const newPrayer: Prayer = {
@@ -112,9 +133,14 @@ export const usePrayerStore = () => {
     setCategories(prev => [...prev, newCategory]);
   };
 
+  const setGoal = (newGoal: Partial<Goal>) => {
+    setGoalState(prev => ({...prev, ...newGoal}));
+  }
+
   return {
     prayers,
     categories,
+    goal,
     isLoaded,
     addPrayer,
     addPrayers,
@@ -122,5 +148,6 @@ export const usePrayerStore = () => {
     deletePrayer,
     togglePrayerStatus,
     addCategory,
+    setGoal,
   };
 };

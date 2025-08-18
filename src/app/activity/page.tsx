@@ -9,7 +9,7 @@ import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { format, subDays, startOfDay, eachDayOfInterval, isSameDay, isToday, startOfWeek, endOfWeek, addWeeks, subWeeks } from 'date-fns';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from 'recharts';
 import { JournalList } from '../journal/page';
-import { ArrowLeft, CheckCircle, Clock, PlusCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Clock, PlusCircle, ChevronLeft, ChevronRight, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { Carousel, CarouselContent, CarouselItem } from '@/components/ui/carousel';
@@ -87,7 +87,7 @@ const StatCard = ({ title, value, goal, icon: Icon }: { title: string, value: st
 export function ActivityPage() {
     const router = useRouter();
     const { entries, isLoaded: isJournalLoaded } = useJournalStore();
-    const { prayers, categories, isLoaded: isPrayerLoaded } = usePrayerStore();
+    const { prayers, categories, goal, isLoaded: isPrayerLoaded } = usePrayerStore();
 
     const [currentDate, setCurrentDate] = useState(startOfDay(new Date()));
     const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
@@ -127,7 +127,7 @@ export function ActivityPage() {
             const total = Math.floor(sessionsInHour.reduce((sum, e) => sum + (e.duration || 0), 0) / 60);
             return {
                 time: `${i}:00`,
-                label: i % 6 === 0 ? format(new Date(2000, 0, 1, i), 'ha').toLowerCase() : '',
+                label: i % 4 === 0 ? format(new Date(2000, 0, 1, i), 'ha').toLowerCase() : '',
                 total: total,
             };
         });
@@ -153,15 +153,18 @@ export function ActivityPage() {
             ? Object.keys(categoryCounts).reduce((a, b) => categoryCounts[a] > categoryCounts[b] ? a : b)
             : '';
         const mostPrayedCategory = categories.find(c => c.id === mostPrayedCategoryId)?.name || 'N/A';
-
+        
+        const weeklyGoal = (goal.dailyPrayerTime || 0) * 7;
+        
         const currentWeeklySummary = {
             totalTime: totalWeekMinutes,
             mostPrayedCategory,
+            weeklyGoal: weeklyGoal,
         }
 
         return { dailyStats: currentDailyStats, hourlyData: currentHourlyData, weeklySummary: currentWeeklySummary };
 
-    }, [selectedDate, entries, prayers, categories, isJournalLoaded, isPrayerLoaded, currentDate]);
+    }, [selectedDate, entries, prayers, categories, isJournalLoaded, isPrayerLoaded, currentDate, goal]);
 
     return (
         <>
@@ -208,16 +211,21 @@ export function ActivityPage() {
                     <Card>
                         <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
                            <StatCard title="Prayers Added" value={dailyStats.prayersAdded?.toString() || '0'} icon={PlusCircle} />
-                           <StatCard title="Prayer Time" value={dailyStats.prayerTime?.toString() || '0'} goal="min" icon={Clock} />
+                           <StatCard title="Prayer Time" value={dailyStats.prayerTime?.toString() || '0'} goal={`${goal.dailyPrayerTime} min`} icon={Clock} />
                            <StatCard title="Answered" value={dailyStats.answeredPrayers?.toString() || '0'} icon={CheckCircle} />
                         </CardContent>
                     </Card>
 
                     <Card>
-                        <CardContent className="p-4 space-y-2">
+                        <CardHeader>
+                            <CardTitle>Weekly Summary</CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4 pt-0 space-y-2">
                            <div className="flex justify-between items-center">
                                 <p className="text-sm text-muted-foreground">Total Prayer Time (Week)</p>
-                                <p className="font-bold">{weeklySummary.totalTime} min</p>
+                                <p className="font-bold">{weeklySummary.totalTime} min
+                                    {weeklySummary.weeklyGoal > 0 && <span className="text-sm font-normal text-muted-foreground"> / {weeklySummary.weeklyGoal} min</span>}
+                                </p>
                            </div>
                            <Separator />
                            <div className="flex justify-between items-center">

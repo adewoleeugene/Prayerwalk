@@ -26,3 +26,7 @@ export interface JournalEntry {
   categoryId?: string;
   duration?: number; // Duration in seconds for prayer walks
 }
+
+export interface Goal {
+    dailyPrayerTime: number; // in minutes
+}
