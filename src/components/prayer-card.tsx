@@ -42,6 +42,15 @@ export function PrayerCard({ prayer }: PrayerCardProps) {
     }
   }
 
+  const handleDelete = () => {
+    deletePrayer(prayer.id);
+    toast({
+        variant: "destructive",
+        title: "Prayer Removed",
+        description: `"${prayer.title}" has been deleted.`,
+    });
+  }
+
   return (
     <>
       <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 animate-in fade-in-50">
@@ -86,7 +95,7 @@ export function PrayerCard({ prayer }: PrayerCardProps) {
                   </AlertDialogHeader>
                   <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => deletePrayer(prayer.id)}>Delete</AlertDialogAction>
+                  <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
                   </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>

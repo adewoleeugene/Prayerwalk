@@ -34,7 +34,7 @@ type StoredVerse = {
 
 export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const { user } = useAuth();
-  const { prayers, categories, isLoaded: isPrayerStoreLoaded } = usePrayerStore();
+  const { prayers, categories, isLoaded: isPrayerStoreLoaded, deletePrayer } = usePrayerStore();
   const { lastSessionDuration, isLoaded: isJournalStoreLoaded } = useJournalStore();
   const [greeting, setGreeting] = useState('');
   const [dailyVerse, setDailyVerse] = useState<DailyVerse | null>(null);
@@ -65,11 +65,9 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
         }
       } catch (error) {
         console.error("Failed to load verse from localStorage", error);
-        // Clear corrupted item
         localStorage.removeItem(VERSE_STORAGE_KEY);
       }
 
-      // If no valid stored verse, fetch a new one
       try {
         const verse = await getDailyVerse();
         if (verse && verse.verse && verse.reference) {
@@ -78,8 +76,6 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
         }
       } catch (error) {
         console.error("Failed to fetch daily verse:", error);
-        // Don't set a new verse, maybe show a fallback or the stale one if available.
-        // For now, we just log the error. The UI will show a message.
       } finally {
         setIsLoadingVerse(false);
       }
@@ -140,7 +136,6 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
         </header>
 
         <main className="px-4 pb-4 space-y-6">
-          {/* Verse of the Day Card */}
           <Card className="shadow-lg bg-primary text-primary-foreground">
             <CardHeader>
               <CardTitle className="text-lg">Verse of the Day</CardTitle>
@@ -163,7 +158,6 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
             </CardContent>
           </Card>
 
-          {/* Quick Actions */}
           <div className="grid grid-cols-3 gap-2">
             <Button size="lg" className="h-20 flex-col gap-1 text-xs" onClick={() => setView({type: 'prayer-walk'})}>
               <Footprints className="h-5 w-5" />
@@ -179,7 +173,6 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
             </Button>
           </div>
           
-           {/* Recent Activity Card */}
            <div className="space-y-2">
               <h2 className="text-lg font-bold font-headline">Recent Activity</h2>
               <Card className="shadow-md cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setView({ type: 'activity' })}>
@@ -213,7 +206,6 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
               </Card>
             </div>
           
-          {/* Recent Prayer Points */}
           <div>
             <h2 className="text-lg font-bold font-headline mb-2">Recent Prayer Points</h2>
             {isPrayerStoreLoaded && recentPrayersForDisplay.length > 0 ? (
