@@ -51,7 +51,13 @@ function PrayerActivityChart({ hourlyData }: { hourlyData: any[] }) {
                             }
                         }}
                     >
-                        <XAxis dataKey="label" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
+                        <XAxis 
+                            dataKey="label" 
+                            stroke="#888888" 
+                            fontSize={12} 
+                            tickLine={false} 
+                            axisLine={false}
+                        />
                         <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}m`} />
                         <Tooltip content={<ChartTooltipContent />} cursor={{fill: 'hsl(var(--secondary))'}} />
                         <Bar dataKey="total" radius={[4, 4, 0, 0]}>
@@ -87,8 +93,8 @@ export function ActivityPage() {
     const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
 
     const weekDays = useMemo(() => {
-        const start = startOfWeek(currentDate);
-        const end = endOfWeek(currentDate);
+        const start = startOfWeek(currentDate, { weekStartsOn: 1 }); // Monday
+        const end = endOfWeek(currentDate, { weekStartsOn: 1 });
         return eachDayOfInterval({ start, end });
     }, [currentDate]);
 
@@ -121,14 +127,14 @@ export function ActivityPage() {
             const total = Math.floor(sessionsInHour.reduce((sum, e) => sum + (e.duration || 0), 0) / 60);
             return {
                 time: `${i}:00`,
-                label: i % 6 === 0 ? format(new Date().setHours(i), 'ha') : '',
+                label: i % 6 === 0 ? format(new Date(2000, 0, 1, i), 'ha').toLowerCase() : '',
                 total: total,
             };
         });
 
         // Calculate stats for the whole week
-        const weekStart = startOfWeek(currentDate);
-        const weekEnd = endOfWeek(currentDate);
+        const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+        const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
         const weekPrayerWalks = entries.filter(e => {
             const entryDate = new Date(e.createdAt);
             return e.sourceType === 'live' && e.duration && entryDate >= weekStart && entryDate <= weekEnd;
