@@ -7,47 +7,64 @@ import { JournalEntry } from '@/lib/types';
 const JOURNAL_STORAGE_KEY = 'praysmart-journal';
 const LAST_SESSION_DURATION_KEY = 'praysmart-last-session-duration';
 
-
-export const useJournalStore = () => {
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
-  const [lastSessionDuration, setLastSessionDurationState] = useState<number | null>(null);
+// Custom hook for cross-tab state synchronization
+function useSyncedState<T>(key: string, initialState: T): [T, (value: T) => void, boolean] {
+  const [state, setState] = useState<T>(initialState);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     try {
-      const storedEntries = localStorage.getItem(JOURNAL_STORAGE_KEY);
-      if (storedEntries) {
-        setEntries(JSON.parse(storedEntries));
+      const storedValue = localStorage.getItem(key);
+      if (storedValue) {
+        setState(JSON.parse(storedValue));
       }
-      const storedDuration = localStorage.getItem(LAST_SESSION_DURATION_KEY);
-      if (storedDuration) {
-        setLastSessionDurationState(JSON.parse(storedDuration));
-      } else {
-        setLastSessionDurationState(0);
-      }
-
     } catch (error) {
-      console.error("Failed to load journal entries from localStorage", error);
+      console.error(`Failed to load '${key}' from localStorage`, error);
     }
     setIsLoaded(true);
-  }, []);
+  }, [key]);
 
-  const setLastSessionDuration = useCallback((duration: number) => {
-    localStorage.setItem(LAST_SESSION_DURATION_KEY, JSON.stringify(duration));
-    setLastSessionDurationState(duration);
-    // Manually dispatch a storage event to notify other tabs/hooks
-    window.dispatchEvent(new StorageEvent('storage', {
-        key: LAST_SESSION_DURATION_KEY,
-        newValue: JSON.stringify(duration),
-        storageArea: window.localStorage,
-    }));
-  }, []);
-
-  useEffect(() => {
-    if (isLoaded) {
-      localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(entries));
+  const setSyncedState = useCallback((value: T) => {
+    try {
+      const valueToStore = JSON.stringify(value);
+      localStorage.setItem(key, valueToStore);
+      setState(value);
+      // Dispatch storage event to notify other tabs/windows
+      window.dispatchEvent(new StorageEvent('storage', {
+          key: key,
+          newValue: valueToStore,
+          storageArea: window.localStorage,
+      }));
+    } catch (error) {
+      console.error(`Failed to save '${key}' to localStorage`, error);
     }
-  }, [entries, isLoaded]);
+  }, [key]);
+  
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.storageArea === window.localStorage && event.key === key && event.newValue) {
+        try {
+          setState(JSON.parse(event.newValue));
+        } catch (error) {
+          console.error(`Failed to parse stored value for '${key}'`, error);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [key]);
+
+  return [state, setSyncedState, isLoaded];
+}
+
+
+export const useJournalStore = () => {
+  const [entries, setEntries, isEntriesLoaded] = useSyncedState<JournalEntry[]>(JOURNAL_STORAGE_KEY, []);
+  const [lastSessionDuration, setLastSessionDuration, isDurationLoaded] = useSyncedState<number | null>(LAST_SESSION_DURATION_KEY, 0);
+
+  const isLoaded = isEntriesLoaded && isDurationLoaded;
 
   const addJournalEntry = (entry: Omit<JournalEntry, 'id' | 'createdAt'>) => {
     const newEntry: JournalEntry = {
@@ -57,43 +74,17 @@ export const useJournalStore = () => {
     };
     const updatedEntries = [newEntry, ...entries];
     setEntries(updatedEntries);
-    localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(updatedEntries));
-     window.dispatchEvent(new StorageEvent('storage', {
-        key: JOURNAL_STORAGE_KEY,
-        newValue: JSON.stringify(updatedEntries),
-        storageArea: window.localStorage,
-    }));
   };
 
   const deleteJournalEntry = (id: string) => {
-    setEntries(prev => prev.filter(entry => entry.id !== id));
+    setEntries(entries.filter(entry => entry.id !== id));
   };
   
   const updateJournalEntryNotes = (id: string, notes: string) => {
-    setEntries(prev => prev.map(entry => 
+    setEntries(entries.map(entry => 
       entry.id === id ? { ...entry, notes } : entry
     ));
   };
-  
-  // This effect handles events from other tabs/windows
-  useEffect(() => {
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.storageArea !== window.localStorage) return;
-      
-      if (event.key === LAST_SESSION_DURATION_KEY && event.newValue) {
-        setLastSessionDurationState(JSON.parse(event.newValue));
-      }
-      if (event.key === JOURNAL_STORAGE_KEY && event.newValue) {
-        setEntries(JSON.parse(event.newValue));
-      }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, []);
-
 
   return {
     entries,

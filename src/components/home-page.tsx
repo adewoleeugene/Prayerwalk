@@ -33,7 +33,6 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const [dailyVerse, setDailyVerse] = useState<DailyVerse | null>(null);
   const [isLoadingVerse, setIsLoadingVerse] = useState(true);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
-  const [showRecentActivity, setShowRecentActivity] = useState(true);
   const [analysis, setAnalysis] = useState<AnalyzePrayerActivityOutput | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(true);
   const { toast } = useToast();
@@ -51,7 +50,7 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   }, []);
 
   useEffect(() => {
-    if (isPrayerStoreLoaded && showRecentActivity) {
+    if (isPrayerStoreLoaded) {
       const oneWeekAgo = subDays(new Date(), 7);
       const recentPrayers = prayers.filter(p => new Date(p.createdAt) > oneWeekAgo && p.status === 'active');
       const answeredPrayers = prayers.filter(p => new Date(p.createdAt) > oneWeekAgo && p.status === 'answered');
@@ -73,15 +72,8 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
         setAnalysis(null);
       }
     }
-  }, [isPrayerStoreLoaded, prayers, categories, showRecentActivity]);
+  }, [isPrayerStoreLoaded, prayers, categories]);
   
-  const handleClearActivity = () => {
-    setShowRecentActivity(false);
-    toast({
-      title: "Activity Cleared",
-      description: "Your recent activity has been cleared from the dashboard.",
-    })
-  }
   
   const lastPrayer = prayers.length > 0 ? prayers[0] : null;
   const lastPrayerTime = lastPrayer ? new Date(lastPrayer.createdAt) : null;
@@ -94,7 +86,7 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   }, [lastSessionDuration]);
 
 
-  const recentPrayersForDisplay = showRecentActivity ? prayers.filter(p => p.status === 'active').slice(0, 3) : [];
+  const recentPrayersForDisplay = prayers.filter(p => p.status === 'active').slice(0, 3);
   const userName = user?.displayName || user?.email?.split('@')[0] || 'friend';
   const userInitial = (user?.displayName || user?.email || 'U').charAt(0).toUpperCase();
 
@@ -174,9 +166,9 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
                                 <Skeleton className="h-4 w-full" />
                                 <Skeleton className="h-4 w-5/6" />
                             </div>
-                        ) : (
-                            <p className="text-sm text-muted-foreground">{analysis?.summary}</p>
-                        )}
+                        ) : analysis?.summary ? (
+                            <p className="text-sm text-muted-foreground">{analysis.summary}</p>
+                        ) : null}
                     </CardContent>
                   )}
               </Card>
