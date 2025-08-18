@@ -51,32 +51,38 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
     else setGreeting('Good evening');
 
     const fetchOrLoadVerse = async () => {
-        const todayStr = new Date().toISOString().split('T')[0];
-        try {
-            const storedItem = localStorage.getItem(VERSE_STORAGE_KEY);
-            if (storedItem) {
-                const storedVerse: StoredVerse = JSON.parse(storedItem);
-                if (storedVerse.date === todayStr) {
-                    setDailyVerse(storedVerse.verse);
-                    setIsLoadingVerse(false);
-                    return;
-                }
-            }
-        } catch (error) {
-            console.error("Failed to load verse from localStorage", error);
+      setIsLoadingVerse(true);
+      const todayStr = new Date().toISOString().split('T')[0];
+      try {
+        const storedItem = localStorage.getItem(VERSE_STORAGE_KEY);
+        if (storedItem) {
+          const storedVerse: StoredVerse = JSON.parse(storedItem);
+          if (storedVerse.date === todayStr && storedVerse.verse) {
+            setDailyVerse(storedVerse.verse);
+            setIsLoadingVerse(false);
+            return;
+          }
         }
+      } catch (error) {
+        console.error("Failed to load verse from localStorage", error);
+        // Clear corrupted item
+        localStorage.removeItem(VERSE_STORAGE_KEY);
+      }
 
-        // If no valid stored verse, fetch a new one
-        try {
-            const verse = await getDailyVerse();
+      // If no valid stored verse, fetch a new one
+      try {
+        const verse = await getDailyVerse();
+        if (verse && verse.verse && verse.reference) {
             setDailyVerse(verse);
             localStorage.setItem(VERSE_STORAGE_KEY, JSON.stringify({ date: todayStr, verse }));
-        } catch (error) {
-            console.error("Failed to fetch daily verse:", error);
-            // Don't clear a stale verse if the fetch fails, just show the old one.
-        } finally {
-            setIsLoadingVerse(false);
         }
+      } catch (error) {
+        console.error("Failed to fetch daily verse:", error);
+        // Don't set a new verse, maybe show a fallback or the stale one if available.
+        // For now, we just log the error. The UI will show a message.
+      } finally {
+        setIsLoadingVerse(false);
+      }
     };
     
     fetchOrLoadVerse();
