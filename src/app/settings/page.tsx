@@ -1,10 +1,11 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
-import { ChevronRight, LogOut, User, Target, Save } from 'lucide-react';
+import { ChevronRight, LogOut, User, Target } from 'lucide-react';
 import type { View } from '@/app/page';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -13,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
 
 export function SettingsPage({ setView }: { setView: (view: View) => void; }) {
-  const { signOut, user } = useAuth();
+  const { signOut } = useAuth();
   const { goal, setGoal, isLoaded } = usePrayerStore();
   const { toast } = useToast();
   const [dailyGoal, setDailyGoal] = useState(goal.dailyPrayerTime);
