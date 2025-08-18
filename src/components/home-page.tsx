@@ -27,8 +27,8 @@ type HomePageProps = {
 
 export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const { user } = useAuth();
-  const { prayers, categories, isLoaded } = usePrayerStore();
-  const { lastSessionDuration } = useJournalStore();
+  const { prayers, categories, isLoaded: isPrayerStoreLoaded } = usePrayerStore();
+  const { lastSessionDuration, isLoaded: isJournalStoreLoaded } = useJournalStore();
   const [greeting, setGreeting] = useState('');
   const [dailyVerse, setDailyVerse] = useState<DailyVerse | null>(null);
   const [isLoadingVerse, setIsLoadingVerse] = useState(true);
@@ -51,7 +51,7 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   }, []);
 
   useEffect(() => {
-    if (isLoaded && showRecentActivity) {
+    if (isPrayerStoreLoaded && showRecentActivity) {
       const oneWeekAgo = subDays(new Date(), 7);
       const recentPrayers = prayers.filter(p => new Date(p.createdAt) > oneWeekAgo && p.status === 'active');
       const answeredPrayers = prayers.filter(p => new Date(p.createdAt) > oneWeekAgo && p.status === 'answered');
@@ -73,7 +73,7 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
         setAnalysis(null);
       }
     }
-  }, [isLoaded, prayers, categories, showRecentActivity]);
+  }, [isPrayerStoreLoaded, prayers, categories, showRecentActivity]);
   
   const handleClearActivity = () => {
     setShowRecentActivity(false);
@@ -86,12 +86,12 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const lastPrayer = prayers.length > 0 ? prayers[0] : null;
   const lastPrayerTime = lastPrayer ? new Date(lastPrayer.createdAt) : null;
   
-  const lastSessionDurationFormatted = (() => {
+  const lastSessionDurationFormatted = React.useMemo(() => {
     if (!lastSessionDuration) return ["0", "minutes"];
     const minutes = Math.floor(lastSessionDuration / 60);
     const unit = minutes === 1 ? 'minute' : 'minutes';
     return [minutes.toString(), unit];
-  })();
+  }, [lastSessionDuration]);
 
 
   const recentPrayersForDisplay = showRecentActivity ? prayers.filter(p => p.status === 'active').slice(0, 3) : [];
@@ -185,7 +185,7 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
           {/* Recent Prayer Points */}
           <div>
             <h2 className="text-lg font-bold font-headline mb-2">Recent Prayer Points</h2>
-            {isLoaded && recentPrayersForDisplay.length > 0 ? (
+            {isPrayerStoreLoaded && recentPrayersForDisplay.length > 0 ? (
               <div className="space-y-4">
                 {recentPrayersForDisplay.map(prayer => <PrayerCard key={prayer.id} prayer={prayer} />)}
               </div>

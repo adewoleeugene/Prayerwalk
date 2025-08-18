@@ -39,6 +39,7 @@ export const useJournalStore = () => {
     window.dispatchEvent(new StorageEvent('storage', {
         key: LAST_SESSION_DURATION_KEY,
         newValue: JSON.stringify(duration),
+        storageArea: window.localStorage,
     }));
   }, []);
 
@@ -60,6 +61,7 @@ export const useJournalStore = () => {
      window.dispatchEvent(new StorageEvent('storage', {
         key: JOURNAL_STORAGE_KEY,
         newValue: JSON.stringify(updatedEntries),
+        storageArea: window.localStorage,
     }));
   };
 
@@ -76,6 +78,8 @@ export const useJournalStore = () => {
   // This effect handles events from other tabs/windows
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
+      if (event.storageArea !== window.localStorage) return;
+      
       if (event.key === LAST_SESSION_DURATION_KEY && event.newValue) {
         setLastSessionDurationState(JSON.parse(event.newValue));
       }
