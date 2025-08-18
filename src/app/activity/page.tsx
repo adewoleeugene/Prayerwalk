@@ -126,7 +126,7 @@ export function ActivityPage() {
             const sessionsInHour = dayPrayerWalks.filter(e => new Date(e.createdAt).getHours() === i);
             const total = Math.floor(sessionsInHour.reduce((sum, e) => sum + (e.duration || 0), 0) / 60);
             return {
-                time: `${i}:00`,
+                time: format(new Date(2000, 0, 1, i), 'h a'),
                 label: i % 4 === 0 ? format(new Date(2000, 0, 1, i), 'ha').toLowerCase() : '',
                 total: total,
             };
@@ -248,3 +248,5 @@ export function ActivityPage() {
 }
 
 export default ActivityPage;
+
+    
