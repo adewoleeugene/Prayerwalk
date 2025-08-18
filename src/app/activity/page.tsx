@@ -11,12 +11,12 @@ import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from 
 import { JournalList } from '../journal/page';
 import { ArrowLeft, CheckCircle, Clock, PlusCircle, ChevronLeft, ChevronRight, Target, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
+import type { View } from '@/app/page';
 
 
 const ChartTooltipContent = ({ active, payload, label }: any) => {
@@ -88,8 +88,7 @@ const StatCard = ({ title, value, goal, icon: Icon }: { title: string, value: st
     </div>
 );
 
-export function ActivityPage() {
-    const router = useRouter();
+export function ActivityPage({ setView }: { setView: (view: View) => void; }) {
     const { entries, isLoaded: isJournalLoaded } = useJournalStore();
     const { prayers, categories, goal, setGoal, isLoaded: isPrayerLoaded } = usePrayerStore();
     const { toast } = useToast();
@@ -201,7 +200,7 @@ export function ActivityPage() {
     return (
         <>
             <header className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-                <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
+                <Button variant="ghost" size="icon" onClick={() => setView({ type: 'home' })}>
                     <ArrowLeft />
                 </Button>
                 <h1 className="text-xl font-bold font-headline">My Activity</h1>
