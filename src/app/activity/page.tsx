@@ -57,6 +57,7 @@ function PrayerActivityChart({ hourlyData }: { hourlyData: any[] }) {
                             fontSize={12} 
                             tickLine={false} 
                             axisLine={false}
+                            interval={0}
                         />
                         <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}m`} />
                         <Tooltip content={<ChartTooltipContent />} cursor={{fill: 'hsl(var(--secondary))'}} />
@@ -127,7 +128,7 @@ export function ActivityPage() {
             const total = Math.floor(sessionsInHour.reduce((sum, e) => sum + (e.duration || 0), 0) / 60);
             return {
                 time: format(new Date(2000, 0, 1, i), 'h a'),
-                label: i % 4 === 0 ? format(new Date(2000, 0, 1, i), 'ha').toLowerCase() : '',
+                label: i % 6 === 0 ? format(new Date(2000, 0, 1, i), 'ha').toLowerCase() : '',
                 total: total,
             };
         });
