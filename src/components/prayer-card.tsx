@@ -6,7 +6,7 @@ import { Prayer } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
-import { Check, CheckCircle, Edit, Trash2 } from 'lucide-react';
+import { Check, CheckCircle, Edit, Trash2, RotateCcw } from 'lucide-react';
 import { PrayerFormDialog } from './prayer-form-dialog';
 import { Badge } from './ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
@@ -34,6 +34,11 @@ export function PrayerCard({ prayer }: PrayerCardProps) {
               </div>
             ),
         });
+    } else {
+        toast({
+            title: "Prayer Reactivated",
+            description: `"${prayer.title}" moved back to active prayers.`,
+        });
     }
   }
 
@@ -57,26 +62,10 @@ export function PrayerCard({ prayer }: PrayerCardProps) {
                 <CheckCircle className="h-5 w-5 text-green-600 hover:text-green-500" />
               </Button>
             ) : (
-                <AlertDialog>
-                <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Remove
-                    </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This will permanently remove this answered prayer.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={() => deletePrayer(prayer.id)}>Remove</AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+                <Button variant="ghost" size="sm" onClick={handleToggleStatus}>
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Reactivate
+                </Button>
             )}
             <Button variant="ghost" size="icon" onClick={() => setIsFormOpen(true)} aria-label="Edit prayer">
               <Edit className="h-5 w-5" />
