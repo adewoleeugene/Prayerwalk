@@ -6,9 +6,12 @@ import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { Prayer } from '@/lib/types';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Square, Loader2 } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { ChevronLeft, ChevronRight, Square, Loader2, CheckCircle, Edit } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { PrayerFormDialog } from '@/components/prayer-form-dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
 
 export default function PrayerWalkPage() {
   const router = useRouter();
@@ -16,11 +19,14 @@ export default function PrayerWalkPage() {
   const searchParams = useSearchParams();
   const categoryId = params.category as string;
   
-  const { prayers, categories, isLoaded } = usePrayerStore();
+  const { prayers, categories, isLoaded, togglePrayerStatus } = usePrayerStore();
+  const { toast } = useToast();
   const [sessionPrayers, setSessionPrayers] = useState<Prayer[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [sessionTitle, setSessionTitle] = useState("Prayer Walk");
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedPrayer, setSelectedPrayer] = useState<Prayer | undefined>(undefined);
 
   useEffect(() => {
     if (isLoaded) {
@@ -75,21 +81,73 @@ export default function PrayerWalkPage() {
   const progress = ((currentIndex + 1) / sessionPrayers.length) * 100;
   
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const mins = Math.floor(seconds / 60);
     const secs = (seconds % 60).toString().padStart(2, '0');
-    return `${mins}:${secs}`;
+    if (mins > 0) {
+        return `${mins}m ${secs}s`;
+    }
+    return `${secs}s`;
   }
 
   const goNext = () => setCurrentIndex(prev => (prev + 1));
   const goPrev = () => setCurrentIndex(prev => (prev - 1));
 
+  const handleEditClick = (prayer: Prayer) => {
+    setSelectedPrayer(prayer);
+    setIsFormOpen(true);
+  }
+
+  const handleMarkAnswered = (prayer: Prayer) => {
+      togglePrayerStatus(prayer.id);
+      toast({
+          title: "Prayer Answered!",
+          description: `"${prayer.title}" has been marked as answered.`
+      });
+  }
+
   if (currentIndex >= sessionPrayers.length) {
     return (
-        <div className="flex flex-col items-center justify-center h-screen gap-4 p-4 text-center">
+        <div className="flex flex-col h-screen bg-background">
+          <header className="p-4 text-center border-b">
             <h1 className="text-3xl font-bold font-headline">Prayer Walk Complete!</h1>
-            <p className="text-lg">You've gone through all your prayer points for this session.</p>
-            <p>Total time: {formatTime(elapsedTime)}</p>
-            <Button onClick={() => router.push('/')}>Finish</Button>
+            <p className="text-muted-foreground mt-2">
+              You prayed for {formatTime(elapsedTime)} through {sessionPrayers.length} prayer points.
+            </p>
+          </header>
+
+          <ScrollArea className="flex-1">
+            <main className="p-4 md:p-6 space-y-4">
+                {sessionPrayers.map(prayer => (
+                    <Card key={prayer.id} className="shadow-sm">
+                        <CardHeader>
+                            <CardTitle className="text-lg">{prayer.title}</CardTitle>
+                        </CardHeader>
+                        <CardFooter className="flex justify-end gap-2">
+                             <Button variant="outline" size="sm" onClick={() => handleEditClick(prayer)}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Add Note / Edit
+                            </Button>
+                            {prayer.status === 'active' && (
+                                <Button variant="outline" size="sm" className="text-green-600" onClick={() => handleMarkAnswered(prayer)}>
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    Mark as Answered
+                                </Button>
+                            )}
+                        </CardFooter>
+                    </Card>
+                ))}
+            </main>
+          </ScrollArea>
+          
+          <footer className="p-4 border-t bg-background">
+            <Button onClick={() => router.push('/')} className="w-full" size="lg">Finish</Button>
+          </footer>
+          
+          <PrayerFormDialog 
+            open={isFormOpen} 
+            onOpenChange={setIsFormOpen} 
+            prayerToEdit={selectedPrayer}
+          />
         </div>
     );
   }
@@ -135,6 +193,11 @@ export default function PrayerWalkPage() {
           <ChevronRight className="h-6 w-6 md:ml-2" />
         </Button>
       </footer>
+       <PrayerFormDialog 
+        open={isFormOpe} 
+        onOpenChange={setIsFormOpen} 
+        prayerToEdit={selectedPrayer}
+      />
     </div>
   );
 }
