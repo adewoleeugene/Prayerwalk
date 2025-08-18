@@ -13,7 +13,7 @@ import { MobileNav } from "@/components/mobile-nav";
 import { IntelligentCaptureDialog } from "@/components/intelligent-capture-dialog";
 import { HomePage } from "@/components/home-page";
 import ProfilePage from "./profile/page";
-import { PrayerWalkLobby } from "./prayer-walk/page";
+import PrayerWalkLobby from "./prayer-walk/page";
 
 export type View = 
   | { type: 'home' } 

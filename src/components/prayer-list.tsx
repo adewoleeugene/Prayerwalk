@@ -6,7 +6,7 @@ import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { PrayerCard } from './prayer-card';
 import { ScrollArea } from './ui/scroll-area';
 import { Button } from './ui/button';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, Footprints, Plus } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
 import { getIcon } from './icons';
@@ -21,6 +21,7 @@ type PrayerListProps = {
 export function PrayerList({ view, onBack, onCaptureClick }: PrayerListProps) {
   const { prayers, categories, isLoaded } = usePrayerStore();
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const router = useRouter();
 
   const filteredPrayers = prayers.filter(p => {
     if (view === 'all') return p.status === 'active';
@@ -74,11 +75,9 @@ export function PrayerList({ view, onBack, onCaptureClick }: PrayerListProps) {
         <div className="p-4 md:p-6 pb-24">
           {showPrayerWalkButton && (
             <div className="mb-4">
-              <Button asChild className="w-full" size="lg">
-                <Link href={`/prayer-walk/${view}`}>
-                  <Footprints className="mr-2 h-5 w-5" />
-                  Start Prayer Walk
-                </Link>
+              <Button onClick={() => router.push(`/prayer-walk/setup?mode=category&id=${view}&count=${filteredPrayers.length}`)} className="w-full" size="lg">
+                <Footprints className="mr-2 h-5 w-5" />
+                Start Prayer Walk
               </Button>
             </div>
           )}

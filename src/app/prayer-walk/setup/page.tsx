@@ -45,16 +45,18 @@ export default function PrayerWalkSetupPage() {
 
   const handleStartWalk = () => {
     let path = '';
+    let finalIds = '';
+    
     if (mode === 'category' && id) {
       path = `/prayer-walk/${id}`;
     } else if (mode === 'custom' && ids) {
-      path = `/prayer-walk/custom?ids=${ids}`;
+      path = `/prayer-walk/custom`;
+      finalIds = `&ids=${ids}`;
     } else if (mode === 'shuffle') {
       path = `/prayer-walk/shuffle`;
     }
     
     if (path) {
-      const finalIds = mode === 'custom' ? `&ids=${ids}` : '';
       router.push(`${path}?timingMode=${timingMode}&duration=${duration}${finalIds}`);
     }
   };

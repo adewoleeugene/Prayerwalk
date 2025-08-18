@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ArrowLeft, Library, Shuffle, ListVideo } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import type { View } from '@/app/page';
 
 export function PrayerWalkLobby() {
   const router = useRouter();

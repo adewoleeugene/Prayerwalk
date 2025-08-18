@@ -162,21 +162,24 @@ export default function PrayerWalkPage() {
   const handleEndSession = () => {
     setIsSessionActive(false);
     setIsSessionEnded(true);
+    setCurrentIndex(sessionPrayers.length);
   };
   
   const SessionCompleteContent = () => {
+      const answeredCount = sessionPrayers.slice(0, Math.min(currentIndex, sessionPrayers.length)).filter(p => p.status === 'answered').length;
+
       return (
         <>
              <AlertDialogHeader className="text-center p-4 border-b">
                 <AlertDialogTitle className="text-3xl font-bold font-headline">Prayer Walk Complete!</AlertDialogTitle>
                 <AlertDialogDescription className="mt-2">
-                     You prayed for {formatTime(elapsedTime)} through {Math.min(currentIndex + 1, sessionPrayers.length)} prayer point(s).
+                     You prayed for {formatTime(elapsedTime)} through {Math.min(currentIndex, sessionPrayers.length)} prayer point(s). {answeredCount > 0 && `${answeredCount} prayer(s) were answered.`}
                 </AlertDialogDescription>
             </AlertDialogHeader>
 
             <ScrollArea className="max-h-[50vh] -mx-6 px-2">
                 <main className="py-4 space-y-4 px-4">
-                    {sessionPrayers.slice(0, currentIndex + 1).map(prayer => (
+                    {sessionPrayers.slice(0, currentIndex).map(prayer => (
                         <Card key={prayer.id} className="shadow-sm">
                             <CardHeader className="p-4">
                                 <CardTitle className="text-md font-medium">{prayer.title}</CardTitle>
@@ -205,7 +208,7 @@ export default function PrayerWalkPage() {
 
             <AlertDialogFooter className="p-4 border-t">
                 <AlertDialogAction onClick={() => {
-                    handleEndSession();
+                    setIsSessionEnded(true);
                     router.push('/');
                 }} className="w-full">Finish</AlertDialogAction>
             </AlertDialogFooter>
@@ -297,7 +300,7 @@ export default function PrayerWalkPage() {
         
         <AlertDialog>
             <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="lg" onClick={handleEndSession}>
+                <Button variant="destructive" size="lg">
                     <Square className="h-5 w-5 md:mr-2" />
                     <span className="hidden md:inline">End Walk</span>
                 </Button>
@@ -320,5 +323,3 @@ export default function PrayerWalkPage() {
     </div>
   );
 }
-
-    
