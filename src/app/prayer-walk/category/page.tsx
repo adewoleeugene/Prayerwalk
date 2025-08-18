@@ -18,6 +18,11 @@ export function PrayerWalkCategorySelection() {
     prayers.some(p => p.categoryId === category.id && p.status === 'active')
   );
 
+  const handleCategorySelect = (categoryId: string) => {
+    const prayerCount = prayers.filter(p => p.categoryId === categoryId && p.status === 'active').length;
+    router.push(`/prayer-walk/setup?mode=category&id=${categoryId}&count=${prayerCount}`);
+  }
+
   return (
     <div className="flex flex-col h-screen">
       <header className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
@@ -43,7 +48,7 @@ export function PrayerWalkCategorySelection() {
                   <Card 
                     key={category.id} 
                     className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer"
-                    onClick={() => router.push(`/prayer-walk/${category.id}`)}
+                    onClick={() => handleCategorySelect(category.id)}
                   >
                     <CardContent className="p-4 flex items-center justify-between">
                       <div className="flex items-center gap-4">

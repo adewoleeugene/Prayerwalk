@@ -11,6 +11,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 export function PrayerWalkLobby() {
   const router = useRouter();
 
+  const handleStartShuffle = () => {
+    router.push(`/prayer-walk/setup?mode=shuffle`);
+  };
+
   return (
     <div className="flex flex-col h-screen">
       <header className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
@@ -57,7 +61,7 @@ export function PrayerWalkLobby() {
 
             <Card 
               className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer"
-              onClick={() => router.push('/prayer-walk/shuffle')}
+              onClick={handleStartShuffle}
             >
               <CardHeader>
                   <CardTitle className="flex items-center gap-3 text-primary">

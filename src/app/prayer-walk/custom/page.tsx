@@ -47,7 +47,7 @@ export default function CustomSessionPage() {
 
   const handleStartSession = () => {
     const ids = Array.from(selectedPrayers).join(',');
-    router.push(`/prayer-walk/custom?ids=${ids}`);
+    router.push(`/prayer-walk/setup?mode=custom&ids=${ids}&count=${selectedPrayers.size}`);
   };
 
   if (!isLoaded) {
