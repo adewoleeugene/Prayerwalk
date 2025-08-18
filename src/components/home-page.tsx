@@ -17,6 +17,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useToast } from '@/hooks/use-toast';
 import { format, subDays, formatDistanceToNow } from 'date-fns';
 import { analyzePrayerActivity, AnalyzePrayerActivityOutput } from '@/ai/flows/analyze-prayer-activity';
+import { useJournalStore } from '@/hooks/use-journal-store';
 
 
 type HomePageProps = {
@@ -27,6 +28,7 @@ type HomePageProps = {
 export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const { user } = useAuth();
   const { prayers, categories, isLoaded } = usePrayerStore();
+  const { lastSessionDuration } = useJournalStore();
   const [greeting, setGreeting] = useState('');
   const [dailyVerse, setDailyVerse] = useState<DailyVerse | null>(null);
   const [isLoadingVerse, setIsLoadingVerse] = useState(true);
@@ -84,8 +86,11 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const lastPrayer = prayers.length > 0 ? prayers[0] : null;
   const lastPrayerTime = lastPrayer ? new Date(lastPrayer.createdAt) : null;
   
-  // Mocked duration for demonstration - will default to 0
-  const lastSessionDuration = "0 minutes";
+  const lastSessionDurationFormatted = (() => {
+    if (lastSessionDuration === null || lastSessionDuration === 0) return "0 minutes";
+    const minutes = Math.floor(lastSessionDuration / 60);
+    return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+  })();
 
 
   const recentPrayersForDisplay = showRecentActivity ? prayers.filter(p => p.status === 'active').slice(0, 3) : [];
@@ -179,8 +184,8 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
                 <Card className="shadow-md">
                      <CardContent className="p-4">
                         <p className="text-sm text-muted-foreground">Duration</p>
-                        <p className="text-2xl font-bold">{lastSessionDuration.split(' ')[0]}</p>
-                        <p className="text-sm font-medium">{lastSessionDuration.split(' ')[1]}</p>
+                        <p className="text-2xl font-bold">{lastSessionDurationFormatted.split(' ')[0]}</p>
+                        <p className="text-sm font-medium">{lastSessionDurationFormatted.split(' ')[1]}</p>
                     </CardContent>
                 </Card>
               </div>

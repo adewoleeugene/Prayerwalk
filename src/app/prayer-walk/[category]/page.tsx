@@ -13,6 +13,7 @@ import { PrayerFormDialog } from '@/components/prayer-form-dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { useJournalStore } from '@/hooks/use-journal-store';
 
 export default function PrayerWalkPage() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function PrayerWalkPage() {
   const categoryId = params.category as string;
   
   const { prayers, categories, isLoaded, togglePrayerStatus } = usePrayerStore();
+  const { setLastSessionDuration } = useJournalStore();
   const { toast } = useToast();
 
   const [sessionPrayers, setSessionPrayers] = useState<Prayer[]>([]);
@@ -86,7 +88,8 @@ export default function PrayerWalkPage() {
 
       remainingTimer = setInterval(() => {
           setRemainingTime(prev => {
-              if (prev > 0) return prev - 1;
+              if (prev > 1) return prev - 1;
+              goNext(); // Automatically go to the next prayer when time is up
               return 0;
           });
       }, 1000);
@@ -96,15 +99,8 @@ export default function PrayerWalkPage() {
         clearInterval(elapsedTimer);
         clearInterval(remainingTimer);
     };
-  }, [isSessionActive, isSessionEnded]);
-
-
-  useEffect(() => {
-      if (remainingTime <= 0 && isSessionActive) {
-          goNext();
-      }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [remainingTime, isSessionActive])
+  }, [isSessionActive, isSessionEnded]);
   
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -125,13 +121,19 @@ export default function PrayerWalkPage() {
       setRemainingTime(prev => prev + seconds);
   }
 
+  const completeSession = () => {
+    setIsSessionActive(false);
+    setIsSessionEnded(true);
+    setCurrentIndex(sessionPrayers.length);
+    setLastSessionDuration(elapsedTime);
+  }
+
   const goNext = () => {
     if (currentIndex < sessionPrayers.length - 1) {
         setCurrentIndex(prev => prev + 1);
         setRemainingTime(timePerPrayer);
     } else {
-        setIsSessionActive(false);
-        setCurrentIndex(prev => prev + 1); // Go to complete screen
+        completeSession();
     }
   };
   
@@ -160,9 +162,7 @@ export default function PrayerWalkPage() {
   }
 
   const handleEndSession = () => {
-    setIsSessionActive(false);
-    setIsSessionEnded(true);
-    setCurrentIndex(sessionPrayers.length);
+    completeSession();
   };
   
   const SessionCompleteContent = () => {
@@ -208,7 +208,6 @@ export default function PrayerWalkPage() {
 
             <AlertDialogFooter className="p-4 border-t">
                 <AlertDialogAction onClick={() => {
-                    setIsSessionEnded(true);
                     router.push('/');
                 }} className="w-full">Finish</AlertDialogAction>
             </AlertDialogFooter>
@@ -234,7 +233,7 @@ export default function PrayerWalkPage() {
       );
   }
 
-  if (currentIndex >= sessionPrayers.length) {
+  if (isSessionEnded) {
     return (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
             <AlertDialog open>
@@ -300,13 +299,22 @@ export default function PrayerWalkPage() {
         
         <AlertDialog>
             <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="lg">
+                <Button variant="destructive" size="lg" onClick={handleEndSession}>
                     <Square className="h-5 w-5 md:mr-2" />
                     <span className="hidden md:inline">End Walk</span>
                 </Button>
             </AlertDialogTrigger>
-            <AlertDialogContent className="p-0 gap-0">
-                <SessionCompleteContent />
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>End your prayer walk?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will end the current session. You can review your prayers before finishing.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleEndSession}>End Walk</AlertDialogAction>
+                </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
 

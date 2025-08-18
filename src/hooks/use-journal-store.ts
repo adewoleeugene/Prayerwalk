@@ -5,9 +5,12 @@ import { useState, useEffect } from 'react';
 import { JournalEntry } from '@/lib/types';
 
 const JOURNAL_STORAGE_KEY = 'praysmart-journal';
+const LAST_SESSION_DURATION_KEY = 'praysmart-last-session-duration';
+
 
 export const useJournalStore = () => {
   const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const [lastSessionDuration, setLastSessionDurationState] = useState<number | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -16,6 +19,11 @@ export const useJournalStore = () => {
       if (storedEntries) {
         setEntries(JSON.parse(storedEntries));
       }
+      const storedDuration = localStorage.getItem(LAST_SESSION_DURATION_KEY);
+      if (storedDuration) {
+        setLastSessionDurationState(JSON.parse(storedDuration));
+      }
+
     } catch (error) {
       console.error("Failed to load journal entries from localStorage", error);
     }
@@ -25,8 +33,11 @@ export const useJournalStore = () => {
   useEffect(() => {
     if (isLoaded) {
       localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(entries));
+      if (lastSessionDuration !== null) {
+        localStorage.setItem(LAST_SESSION_DURATION_KEY, JSON.stringify(lastSessionDuration));
+      }
     }
-  }, [entries, isLoaded]);
+  }, [entries, lastSessionDuration, isLoaded]);
 
   const addJournalEntry = (entry: Omit<JournalEntry, 'id' | 'createdAt'>) => {
     const newEntry: JournalEntry = {
@@ -47,11 +58,17 @@ export const useJournalStore = () => {
     ));
   };
 
+  const setLastSessionDuration = (duration: number) => {
+    setLastSessionDurationState(duration);
+  }
+
   return {
     entries,
     isLoaded,
     addJournalEntry,
     deleteJournalEntry,
     updateJournalEntryNotes,
+    lastSessionDuration,
+    setLastSessionDuration
   };
 };
