@@ -4,7 +4,7 @@
 import React from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { ArrowLeft, Library, Shuffle, ListVideo } from 'lucide-react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -14,7 +14,7 @@ export function PrayerWalkLobby() {
   return (
     <div className="flex flex-col h-screen">
       <header className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+        <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
           <ArrowLeft />
         </Button>
         <h1 className="text-xl font-bold font-headline">Start a Prayer Walk</h1>
@@ -42,23 +42,29 @@ export function PrayerWalkLobby() {
               </CardHeader>
             </Card>
 
-             <Card className="shadow-md bg-muted/50 cursor-not-allowed">
+             <Card 
+                className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+                onClick={() => router.push('/prayer-walk/custom')}
+              >
               <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-muted-foreground">
+                  <CardTitle className="flex items-center gap-3 text-primary">
                       <ListVideo className="h-6 w-6" />
                       Create Custom Session
                   </CardTitle>
-                  <CardDescription>Build a prayer "playlist" from multiple categories. (Coming Soon)</CardDescription>
+                  <CardDescription>Build a prayer "playlist" from multiple categories.</CardDescription>
               </CardHeader>
             </Card>
 
-            <Card className="shadow-md bg-muted/50 cursor-not-allowed">
+            <Card 
+              className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+              onClick={() => router.push('/prayer-walk/shuffle')}
+            >
               <CardHeader>
-                  <CardTitle className="flex items-center gap-3 text-muted-foreground">
+                  <CardTitle className="flex items-center gap-3 text-primary">
                       <Shuffle className="h-6 w-6" />
                       Guided Walk (Shuffle)
                   </CardTitle>
-                  <CardDescription>Let the app create a randomized prayer list for you. (Coming Soon)</CardDescription>
+                  <CardDescription>Let the app create a randomized prayer list for you.</CardDescription>
               </CardHeader>
             </Card>
           </div>

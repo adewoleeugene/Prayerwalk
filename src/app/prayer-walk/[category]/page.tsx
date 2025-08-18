@@ -1,9 +1,10 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { Prayer } from '@/lib/types';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, ChevronRight, Square, Loader2 } from 'lucide-react';
@@ -12,21 +13,38 @@ import { Progress } from '@/components/ui/progress';
 export default function PrayerWalkPage() {
   const router = useRouter();
   const params = useParams();
+  const searchParams = useSearchParams();
   const categoryId = params.category as string;
   
   const { prayers, categories, isLoaded } = usePrayerStore();
   const [sessionPrayers, setSessionPrayers] = useState<Prayer[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [elapsedTime, setElapsedTime] = useState(0);
-
-  const category = categories.find(c => c.id === categoryId);
+  const [sessionTitle, setSessionTitle] = useState("Prayer Walk");
 
   useEffect(() => {
     if (isLoaded) {
-      const filtered = prayers.filter(p => p.categoryId === categoryId && p.status === 'active');
+      let filtered: Prayer[] = [];
+      if (categoryId === 'shuffle') {
+        const allActive = prayers.filter(p => p.status === 'active');
+        // Simple shuffle algorithm
+        filtered = allActive.sort(() => Math.random() - 0.5);
+        setSessionTitle("Shuffled Prayer Walk");
+      } else if (categoryId === 'custom') {
+        const customPrayerIds = searchParams.get('ids')?.split(',') || [];
+        if(customPrayerIds.length > 0) {
+            const prayerMap = new Map(prayers.map(p => [p.id, p]));
+            filtered = customPrayerIds.map(id => prayerMap.get(id)).filter((p): p is Prayer => !!p);
+        }
+        setSessionTitle("Custom Prayer Walk");
+      } else {
+        filtered = prayers.filter(p => p.categoryId === categoryId && p.status === 'active');
+        const category = categories.find(c => c.id === categoryId);
+        setSessionTitle(`${category?.name || 'Category'} Prayer Walk`);
+      }
       setSessionPrayers(filtered);
     }
-  }, [isLoaded, prayers, categoryId]);
+  }, [isLoaded, prayers, categories, categoryId, searchParams]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -47,7 +65,7 @@ export default function PrayerWalkPage() {
   if (sessionPrayers.length === 0) {
       return (
           <div className="flex flex-col items-center justify-center h-screen gap-4 p-4 text-center">
-              <p className="text-lg">No active prayers in this category to start a walk.</p>
+              <p className="text-lg">No active prayers found for this session.</p>
               <Button onClick={() => router.back()}>Go Back</Button>
           </div>
       );
@@ -69,9 +87,9 @@ export default function PrayerWalkPage() {
     return (
         <div className="flex flex-col items-center justify-center h-screen gap-4 p-4 text-center">
             <h1 className="text-3xl font-bold font-headline">Prayer Walk Complete!</h1>
-            <p className="text-lg">You've gone through all your prayer points for {category?.name}.</p>
+            <p className="text-lg">You've gone through all your prayer points for this session.</p>
             <p>Total time: {formatTime(elapsedTime)}</p>
-            <Button onClick={() => router.back()}>Finish</Button>
+            <Button onClick={() => router.push('/')}>Finish</Button>
         </div>
     );
   }
@@ -79,7 +97,7 @@ export default function PrayerWalkPage() {
   return (
     <div className="flex flex-col h-screen bg-background p-4 md:p-8">
       <header className="flex items-center justify-between mb-4">
-        <h1 className="text-2xl font-bold font-headline">{category?.name} Prayer Walk</h1>
+        <h1 className="text-2xl font-bold font-headline">{sessionTitle}</h1>
         <div className="text-lg font-semibold tabular-nums">{formatTime(elapsedTime)}</div>
       </header>
 

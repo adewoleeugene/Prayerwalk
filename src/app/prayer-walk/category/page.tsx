@@ -21,7 +21,7 @@ export function PrayerWalkCategorySelection() {
   return (
     <div className="flex flex-col h-screen">
       <header className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+        <Button variant="ghost" size="icon" onClick={() => router.push('/prayer-walk')}>
           <ArrowLeft />
         </Button>
         <h1 className="text-xl font-bold font-headline">Choose a Category</h1>

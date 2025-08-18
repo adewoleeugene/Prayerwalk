@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from "react";
@@ -12,13 +13,15 @@ import { MobileNav } from "@/components/mobile-nav";
 import { IntelligentCaptureDialog } from "@/components/intelligent-capture-dialog";
 import { HomePage } from "@/components/home-page";
 import ProfilePage from "./profile/page";
+import { PrayerWalkLobby } from "./prayer-walk/page";
 
 export type View = 
   | { type: 'home' } 
   | { type: 'library' }
   | { type: 'journal' }
   | { type: 'settings' }
-  | { type: 'profile' };
+  | { type: 'profile' }
+  | { type: 'prayer-walk' };
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -52,6 +55,8 @@ export default function Home() {
         return <SettingsPage setView={setView} />;
       case 'profile':
         return <ProfilePage setView={setView} />;
+      case 'prayer-walk':
+        return <PrayerWalkLobby />;
       default:
         return <HomePage onCaptureClick={() => setIsCaptureDialogOpen(true)} setView={setView} />;
     }

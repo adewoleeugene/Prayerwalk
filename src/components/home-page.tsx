@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useEffect, useState } from 'react';
@@ -9,7 +10,6 @@ import { getDailyVerse, DailyVerse } from '@/ai/flows/get-daily-verse';
 import { Skeleton } from './ui/skeleton';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { PrayerCard } from './prayer-card';
-import { useRouter } from 'next/navigation';
 import { AddCategoryDialog } from './add-category-dialog';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import type { View } from '@/app/page';
@@ -24,7 +24,6 @@ type HomePageProps = {
 export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const { user } = useAuth();
   const { prayers, categories, isLoaded } = usePrayerStore();
-  const router = useRouter();
   const [greeting, setGreeting] = useState('');
   const [dailyVerse, setDailyVerse] = useState<DailyVerse | null>(null);
   const [isLoadingVerse, setIsLoadingVerse] = useState(true);
@@ -98,7 +97,7 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
 
           {/* Quick Actions */}
           <div className="grid grid-cols-3 gap-2">
-            <Button size="lg" className="h-20 flex-col gap-1 text-xs" onClick={() => router.push('/prayer-walk')}>
+            <Button size="lg" className="h-20 flex-col gap-1 text-xs" onClick={() => setView({type: 'prayer-walk'})}>
               <Footprints className="h-5 w-5" />
               <span>Prayer Walk</span>
             </Button>
