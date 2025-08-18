@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { Prayer } from '@/lib/types';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -23,17 +23,17 @@ export default function PrayerWalkPage() {
   const { prayers, categories, isLoaded, togglePrayerStatus } = usePrayerStore();
   const { toast } = useToast();
 
-  const [sessionPrayers, setSessionPrayers] = React.useState<Prayer[]>([]);
-  const [currentIndex, setCurrentIndex] = React.useState(0);
-  const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [selectedPrayer, setSelectedPrayer] = React.useState<Prayer | undefined>(undefined);
-  const [sessionTitle, setSessionTitle] = React.useState("Prayer Walk");
+  const [sessionPrayers, setSessionPrayers] = useState<Prayer[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedPrayer, setSelectedPrayer] = useState<Prayer | undefined>(undefined);
+  const [sessionTitle, setSessionTitle] = useState("Prayer Walk");
   
   // Timer state
-  const [timePerPrayer, setTimePerPrayer] = React.useState(300); // default 5 mins
-  const [remainingTime, setRemainingTime] = React.useState(timePerPrayer);
-  const [isSessionActive, setIsSessionActive] = React.useState(false);
-
+  const [timePerPrayer, setTimePerPrayer] = useState(300); // default 5 mins
+  const [remainingTime, setRemainingTime] = useState(timePerPrayer);
+  const [isSessionActive, setIsSessionActive] = useState(false);
+  const [elapsedTime, setElapsedTime] = useState(0);
 
   React.useEffect(() => {
     if (isLoaded) {
@@ -62,7 +62,7 @@ export default function PrayerWalkPage() {
       
       if (filtered.length > 0) {
         let newTimePerPrayer = 300; // Default
-        if (timingMode === 'total') {
+        if (timingMode === 'total' && filtered.length > 0) {
             newTimePerPrayer = Math.floor((duration * 60) / filtered.length);
         } else { // 'per_prayer'
             newTimePerPrayer = duration * 60;
@@ -74,17 +74,27 @@ export default function PrayerWalkPage() {
     }
   }, [isLoaded, prayers, categories, categoryId, searchParams]);
 
-  React.useEffect(() => {
-    if (!isSessionActive || remainingTime <= 0) return;
+  useEffect(() => {
+    if (!isSessionActive) return;
 
-    const timer = setInterval(() => {
-        setRemainingTime(prev => prev - 1);
+    const elapsedTimer = setInterval(() => {
+        setElapsedTime(prev => prev + 1);
+    }, 1000)
+
+    const remainingTimer = setInterval(() => {
+        setRemainingTime(prev => {
+            if (prev > 0) return prev - 1;
+            return 0;
+        });
     }, 1000);
-    
-    return () => clearInterval(timer);
-  }, [isSessionActive, remainingTime]);
 
-  React.useEffect(() => {
+    return () => {
+        clearInterval(elapsedTimer);
+        clearInterval(remainingTimer);
+    };
+  }, [isSessionActive]);
+
+  useEffect(() => {
       if (remainingTime <= 0 && isSessionActive) {
           goNext();
       }
@@ -92,6 +102,15 @@ export default function PrayerWalkPage() {
   }, [remainingTime, isSessionActive])
   
   const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    if (mins > 0) {
+        return `${mins} minute${mins > 1 ? 's' : ''} ${secs > 0 ? `and ${secs} second${secs > 1 ? 's': ''}` : ''}`
+    }
+    return `${secs} second${secs > 1 ? 's': ''}`;
+  }
+
+  const formatCountdown = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = (seconds % 60).toString().padStart(2, '0');
     return `${mins}:${secs}`;
@@ -145,7 +164,7 @@ export default function PrayerWalkPage() {
             <AlertDialogHeader>
                 <AlertDialogTitle className="text-center text-3xl font-bold font-headline">Prayer Walk Complete!</AlertDialogTitle>
                 <AlertDialogDescription className="text-center">
-                    You prayed through {Math.min(currentIndex, sessionPrayers.length)} prayer point(s).
+                    You prayed for {formatTime(elapsedTime)} through {Math.min(currentIndex, sessionPrayers.length)} prayer point(s).
                 </AlertDialogDescription>
             </AlertDialogHeader>
 
@@ -153,7 +172,7 @@ export default function PrayerWalkPage() {
                 <main className="py-4 space-y-4">
                     {sessionPrayers.slice(0, currentIndex).map(prayer => (
                         <Card key={prayer.id} className="shadow-sm">
-                            <CardHeader className="p-4 pb-2">
+                            <CardHeader className="p-4">
                                 <CardTitle className="text-md font-medium">{prayer.title}</CardTitle>
                             </CardHeader>
                             <CardFooter className="flex justify-end gap-2 p-2 pt-0">
@@ -179,7 +198,10 @@ export default function PrayerWalkPage() {
             </ScrollArea>
 
             <AlertDialogFooter>
-                <AlertDialogAction onClick={() => router.push('/')} className="w-full">Finish</AlertDialogAction>
+                <AlertDialogAction onClick={() => {
+                    handleEndSession();
+                    router.push('/');
+                }} className="w-full">Finish</AlertDialogAction>
             </AlertDialogFooter>
         </>
       )
@@ -229,7 +251,7 @@ export default function PrayerWalkPage() {
         <h1 className="text-2xl font-bold font-headline">{sessionTitle}</h1>
         <div className="text-lg font-semibold tabular-nums flex items-center gap-2">
             <Timer className="h-5 w-5" />
-            {formatTime(remainingTime)}
+            {formatCountdown(remainingTime)}
         </div>
       </header>
 
@@ -269,7 +291,7 @@ export default function PrayerWalkPage() {
         
         <AlertDialog>
             <AlertDialogTrigger asChild>
-                <Button variant="destructive" size="lg" onClick={handleEndSession}>
+                <Button variant="destructive" size="lg">
                     <Square className="h-5 w-5 md:mr-2" />
                     <span className="hidden md:inline">End Walk</span>
                 </Button>
@@ -292,7 +314,5 @@ export default function PrayerWalkPage() {
     </div>
   );
 }
-
-    
 
     
