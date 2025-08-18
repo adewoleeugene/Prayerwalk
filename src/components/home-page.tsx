@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { FolderPlus, Footprints, Sparkles, Trash2 } from 'lucide-react';
+import { FolderPlus, Footprints, Sparkles, Trash2, ArrowRight } from 'lucide-react';
 import { getDailyVerse, DailyVerse } from '@/ai/flows/get-daily-verse';
 import { Skeleton } from './ui/skeleton';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
@@ -174,22 +174,23 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
                 </AlertDialog>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <Card className="shadow-md">
-                    <CardContent className="p-4">
-                        <p className="text-sm text-muted-foreground">Last Prayer</p>
-                        <p className="text-xl font-bold">{lastPrayerTime ? format(lastPrayerTime, 'p') : 'N/A'}</p>
-                        <p className="text-sm font-medium">{lastPrayerTime ? format(lastPrayerTime, 'eeee') : ''}</p>
-                    </CardContent>
-                </Card>
-                <Card className="shadow-md">
-                     <CardContent className="p-4">
-                        <p className="text-sm text-muted-foreground">Duration</p>
-                        <p className="text-2xl font-bold">{lastSessionDurationFormatted[0]}</p>
-                        <p className="text-sm font-medium capitalize">{lastSessionDurationFormatted[1]}</p>
-                    </CardContent>
-                </Card>
-              </div>
+               <Card className="shadow-md cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setView({ type: 'activity' })}>
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="grid grid-cols-2 gap-6 w-full">
+                       <div>
+                          <p className="text-sm text-muted-foreground">Last Prayer</p>
+                          <p className="text-xl font-bold">{lastPrayerTime ? format(lastPrayerTime, 'p') : 'N/A'}</p>
+                          <p className="text-sm font-medium">{lastPrayerTime ? format(lastPrayerTime, 'eeee') : ''}</p>
+                       </div>
+                       <div>
+                          <p className="text-sm text-muted-foreground">Duration</p>
+                          <p className="text-2xl font-bold">{lastSessionDurationFormatted[0]}</p>
+                          <p className="text-sm font-medium capitalize">{lastSessionDurationFormatted[1]}</p>
+                      </div>
+                    </div>
+                    <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                  </CardContent>
+              </Card>
 
               {isLoadingAnalysis ? (
                  <Card className="mt-4 shadow-md"><CardContent className="p-4"><Skeleton className="h-20 w-full" /></CardContent></Card>

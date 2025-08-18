@@ -22,7 +22,7 @@ export default function PrayerWalkPage() {
   const categoryId = params.category as string;
   
   const { prayers, categories, isLoaded, togglePrayerStatus } = usePrayerStore();
-  const { setLastSessionDuration } = useJournalStore();
+  const { setLastSessionDuration, addJournalEntry } = useJournalStore();
   const { toast } = useToast();
 
   const [sessionPrayers, setSessionPrayers] = useState<Prayer[]>([]);
@@ -126,6 +126,14 @@ export default function PrayerWalkPage() {
     setIsSessionEnded(true);
     setCurrentIndex(sessionPrayers.length);
     setLastSessionDuration(elapsedTime);
+    addJournalEntry({
+      title: sessionTitle,
+      sourceType: 'live',
+      notes: `Completed a prayer walk session for ${formatTime(elapsedTime)}.`,
+      prayerPoints: sessionPrayers.slice(0, currentIndex).map(p => ({ point: p.title, bibleVerse: p.bibleVerse || '' })),
+      categoryId: categoryId,
+      duration: elapsedTime,
+    });
   }
 
   const goNext = () => {
@@ -341,5 +349,3 @@ export default function PrayerWalkPage() {
     </div>
   );
 }
-
-    

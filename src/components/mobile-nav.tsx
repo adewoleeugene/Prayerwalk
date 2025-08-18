@@ -1,7 +1,8 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Home, Library, Notebook, Settings, Sparkles } from "lucide-react";
+import { Activity, Home, Library, Settings, Sparkles } from "lucide-react";
 import type { View } from "@/app/page";
 
 type MobileNavProps = {
@@ -16,7 +17,7 @@ export function MobileNav({ activeView, onNavigate, onCaptureClick }: MobileNavP
     { view: { type: 'library' } as View, icon: Library, label: 'Library' },
     // Placeholder for the FAB
     { view: null, icon: null, label: 'Capture' },
-    { view: { type: 'journal' } as View, icon: Notebook, label: 'Journal' },
+    { view: { type: 'activity' } as View, icon: Activity, label: 'Activity' },
     { view: { type: 'settings' } as View, icon: Settings, label: 'Settings' },
   ];
 

@@ -1,3 +1,4 @@
+
 export interface Prayer {
   id: string;
   title: string;
@@ -23,4 +24,5 @@ export interface JournalEntry {
   notes: string; // Full transcribed text
   prayerPoints: { point: string; bibleVerse: string; }[];
   categoryId?: string;
+  duration?: number; // Duration in seconds for prayer walks
 }

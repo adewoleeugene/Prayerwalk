@@ -7,18 +7,18 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { JournalPage } from "@/app/journal/page";
 import { SettingsPage } from "@/app/settings/page";
 import { MobileNav } from "@/components/mobile-nav";
 import { IntelligentCaptureDialog } from "@/components/intelligent-capture-dialog";
 import { HomePage } from "@/components/home-page";
 import ProfilePage from "./profile/page";
 import PrayerWalkLobby from "./prayer-walk/page";
+import { ActivityPage } from "./activity/page";
 
 export type View = 
   | { type: 'home' } 
   | { type: 'library' }
-  | { type: 'journal' }
+  | { type: 'activity' }
   | { type: 'settings' }
   | { type: 'profile' }
   | { type: 'prayer-walk' };
@@ -49,8 +49,8 @@ export default function Home() {
         return <HomePage onCaptureClick={() => setIsCaptureDialogOpen(true)} setView={setView} />;
       case 'library':
         return <Dashboard onCaptureClick={() => setIsCaptureDialogOpen(true)} />;
-      case 'journal':
-        return <JournalPage />;
+      case 'activity':
+        return <ActivityPage />;
       case 'settings':
         return <SettingsPage setView={setView} />;
       case 'profile':

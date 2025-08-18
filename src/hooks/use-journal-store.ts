@@ -35,6 +35,11 @@ export const useJournalStore = () => {
   const setLastSessionDuration = useCallback((duration: number) => {
     localStorage.setItem(LAST_SESSION_DURATION_KEY, JSON.stringify(duration));
     setLastSessionDurationState(duration);
+    // Manually dispatch a storage event to notify other tabs/hooks
+    window.dispatchEvent(new StorageEvent('storage', {
+        key: LAST_SESSION_DURATION_KEY,
+        newValue: JSON.stringify(duration),
+    }));
   }, []);
 
   useEffect(() => {
@@ -49,7 +54,13 @@ export const useJournalStore = () => {
       id: new Date().toISOString() + Math.random(),
       createdAt: new Date().toISOString(),
     };
-    setEntries(prev => [newEntry, ...prev]);
+    const updatedEntries = [newEntry, ...entries];
+    setEntries(updatedEntries);
+    localStorage.setItem(JOURNAL_STORAGE_KEY, JSON.stringify(updatedEntries));
+     window.dispatchEvent(new StorageEvent('storage', {
+        key: JOURNAL_STORAGE_KEY,
+        newValue: JSON.stringify(updatedEntries),
+    }));
   };
 
   const deleteJournalEntry = (id: string) => {
