@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { FolderPlus, Footprints, Sparkles, Activity } from 'lucide-react';
+import { FolderPlus, Footprints, Sparkles, Activity, Trash2 } from 'lucide-react';
 import { getDailyVerse, DailyVerse } from '@/ai/flows/get-daily-verse';
 import { Skeleton } from './ui/skeleton';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
@@ -15,6 +15,8 @@ import { Avatar, AvatarFallback } from './ui/avatar';
 import type { View } from '@/app/page';
 import { analyzePrayerActivity, AnalyzePrayerActivityOutput } from '@/ai/flows/analyze-prayer-activity';
 import { PrayerChart } from './prayer-chart';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from './ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 type HomePageProps = {
   onCaptureClick: () => void;
@@ -30,6 +32,8 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [analysis, setAnalysis] = useState<AnalyzePrayerActivityOutput | null>(null);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(true);
+  const [showRecentActivity, setShowRecentActivity] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     const hours = new Date().getHours();
@@ -45,6 +49,7 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   
   useEffect(() => {
     if(isLoaded && prayers.length > 0) {
+      setShowRecentActivity(true);
       const recentPrayers = prayers.filter(p => p.status === 'active').slice(0, 10);
       const answeredPrayers = prayers.filter(p => p.status === 'answered').slice(0, 10);
 
@@ -54,10 +59,20 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
         .finally(() => setIsLoadingAnalysis(false));
     } else if (isLoaded) {
       setIsLoadingAnalysis(false);
+      setShowRecentActivity(false);
     }
   }, [isLoaded, prayers, categories]);
 
-  const recentPrayersForDisplay = prayers.filter(p => p.status === 'active').slice(0, 3);
+  const handleClearActivity = () => {
+    setAnalysis(null);
+    setShowRecentActivity(false);
+    toast({
+      title: "Activity Cleared",
+      description: "Your recent activity has been cleared from the dashboard.",
+    })
+  }
+
+  const recentPrayersForDisplay = showRecentActivity ? prayers.filter(p => p.status === 'active').slice(0, 3) : [];
   const userName = user?.displayName || user?.email?.split('@')[0] || 'friend';
   const userInitial = (user?.displayName || user?.email || 'U').charAt(0).toUpperCase();
 
@@ -112,34 +127,59 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
           </div>
           
           {/* Recent Activity Analysis */}
-          <Card className="shadow-md">
-             <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Activity />
-                  Recent Activity
-                </CardTitle>
-                <CardDescription>An AI-powered summary of your recent prayer life.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {isLoadingAnalysis ? (
-                 <div className="space-y-2">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                  <Skeleton className="h-32 w-full mt-2" />
-                </div>
-              ) : analysis && (analysis.summary || analysis.categoryDistribution.length > 0) ? (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground italic">"{analysis.summary}"</p>
-                  {analysis.categoryDistribution.length > 0 && <PrayerChart data={analysis.categoryDistribution} />}
-                </div>
-              ) : (
-                 <div className="text-center text-muted-foreground py-8">
-                  <p>No recent activity to analyze.</p>
-                  <p>Start by adding some prayer points.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          { showRecentActivity && (
+            <Card className="shadow-md">
+              <CardHeader>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <Activity />
+                        Recent Activity
+                      </CardTitle>
+                      <CardDescription>An AI-powered summary of your recent prayer life.</CardDescription>
+                    </div>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" aria-label="Clear activity">
+                            <Trash2 className="h-5 w-5 text-muted-foreground" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                          <AlertDialogHeader>
+                              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                  This action will clear your recent activity summary and recent prayer points from this dashboard view. It will not delete any of your prayer data.
+                              </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={handleClearActivity}>Clear</AlertDialogAction>
+                          </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+              </CardHeader>
+              <CardContent>
+                {isLoadingAnalysis ? (
+                  <div className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-2/3" />
+                    <Skeleton className="h-32 w-full mt-2" />
+                  </div>
+                ) : analysis && (analysis.summary || analysis.categoryDistribution.length > 0) ? (
+                  <div className="space-y-4">
+                    <p className="text-sm text-muted-foreground italic">"{analysis.summary}"</p>
+                    {analysis.categoryDistribution.length > 0 && <PrayerChart data={analysis.categoryDistribution} />}
+                  </div>
+                ) : (
+                  <div className="text-center text-muted-foreground py-8">
+                    <p>No recent activity to analyze.</p>
+                    <p>Start by adding some prayer points.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
           
           {/* Recent Prayer Points */}
           <div>
