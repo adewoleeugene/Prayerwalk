@@ -194,7 +194,7 @@ export default function PrayerWalkPage() {
         </Button>
       </footer>
        <PrayerFormDialog 
-        open={isFormOpe} 
+        open={isFormOpen} 
         onOpenChange={setIsFormOpen} 
         prayerToEdit={selectedPrayer}
       />
