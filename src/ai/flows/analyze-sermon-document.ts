@@ -38,7 +38,7 @@ const prompt = ai.definePrompt({
     name: 'analyzeSermonDocumentPrompt',
     input: { schema: z.object({ documentDataUri: z.string() }) },
     output: { schema: AnalyzeSermonDocumentOutputSchema },
-    prompt: `You are an AI assistant built to process sermon-related documents. Your goal is to transform the provided content into a structured, actionable spiritual guide for the user. Your output must be a single JSON object based strictly on the input text.
+    prompt: `You are an AI assistant built to process sermon-related documents. First, read and analyze the ENTIRE document from start to finish. Then, your goal is to transform the provided content into a structured, actionable spiritual guide for the user. Your output must be a single JSON object based strictly on the input text.
 
 Your final output must be in this exact JSON format:
 
