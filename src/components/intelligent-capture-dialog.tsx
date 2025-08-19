@@ -97,55 +97,71 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                 setEditableNotes(response.notes);
                 setSelectedPoints(response.prayerPoints.map((_, i) => i));
 
-            } else { // Handles PDF and other potential document types
-                 const reader = new FileReader();
-                 reader.readAsDataURL(file);
-                 reader.onloadend = async () => {
-                    const dataUri = reader.result as string;
-                    setLoadingMessage('Analyzing PDF document...');
-                    const response = await analyzeSermonDocument({ documentDataUri: dataUri });
-                    setResult({
-                        title: response.title || captureTitle,
-                        sourceType: 'document',
-                        sourceData: dataUri,
-                        notes: response.coreMessageSummary,
-                        prayerPoints: response.prayerPoints.map(p => ({ point: p, bibleVerse: ''})),
-                    });
-                    setEditableNotes(response.coreMessageSummary);
-                    setSelectedPoints(response.prayerPoints.map((_, i) => i));
+            } else { // Handles PDF
+                setLoadingMessage('Analyzing PDF document...');
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onloadend = async () => {
+                    try {
+                        const dataUri = reader.result as string;
+                        const response = await analyzeSermonDocument({ documentDataUri: dataUri });
+                        setResult({
+                            title: response.title || captureTitle,
+                            sourceType: 'document',
+                            sourceData: dataUri,
+                            notes: response.coreMessageSummary,
+                            prayerPoints: response.prayerPoints.map(p => ({ point: p, bibleVerse: ''})),
+                        });
+                        setEditableNotes(response.coreMessageSummary);
+                        setSelectedPoints(response.prayerPoints.map((_, i) => i));
+                    } catch (error) {
+                        console.error(`Error processing ${type}:`, error);
+                        toast({ variant: "destructive", title: `Failed to process ${type}`, description: "An error occurred. Please try another file." });
+                    } finally {
+                        setIsLoading(false);
+                    }
                  }
+                 return; // Prevent outer finally from running early
             }
         } else { // Handles Image and Audio
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onloadend = async () => {
-                const dataUri = reader.result as string;
-                if (type === 'image') {
-                    setLoadingMessage('Analyzing image...');
-                    const response = await convertImageTextToPrayerPoints({ photoDataUri: dataUri });
-                    setResult({
-                        title: captureTitle,
-                        sourceType: 'image',
-                        sourceData: dataUri,
-                        notes: response.extractedText,
-                        prayerPoints: response.prayerPoints,
-                    });
-                    setEditableNotes(response.extractedText);
-                    setSelectedPoints(response.prayerPoints.map((_, i) => i));
-                } else if (type === 'audio') {
-                    setLoadingMessage('Transcribing audio...');
-                    const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
-                    setResult({
-                        title: captureTitle,
-                        sourceType: 'audio',
-                        sourceData: dataUri,
-                        notes: response.notes,
-                        prayerPoints: response.prayerPoints,
-                    });
-                    setEditableNotes(response.notes);
-                    setSelectedPoints(response.prayerPoints.map((_, i) => i));
+                try {
+                    const dataUri = reader.result as string;
+                    if (type === 'image') {
+                        setLoadingMessage('Analyzing image...');
+                        const response = await convertImageTextToPrayerPoints({ photoDataUri: dataUri });
+                        setResult({
+                            title: captureTitle,
+                            sourceType: 'image',
+                            sourceData: dataUri,
+                            notes: response.extractedText,
+                            prayerPoints: response.prayerPoints,
+                        });
+                        setEditableNotes(response.extractedText);
+                        setSelectedPoints(response.prayerPoints.map((_, i) => i));
+                    } else if (type === 'audio') {
+                        setLoadingMessage('Transcribing audio...');
+                        const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
+                        setResult({
+                            title: captureTitle,
+                            sourceType: 'audio',
+                            sourceData: dataUri,
+                            notes: response.notes,
+                            prayerPoints: response.prayerPoints,
+                        });
+                        setEditableNotes(response.notes);
+                        setSelectedPoints(response.prayerPoints.map((_, i) => i));
+                    }
+                } catch (error) {
+                    console.error(`Error processing ${type}:`, error);
+                    toast({ variant: "destructive", title: `Failed to process ${type}`, description: "An error occurred. Please try another file." });
+                } finally {
+                    setIsLoading(false);
                 }
             }
+            return; // Prevent outer finally from running early
       }
     } catch (error) {
       console.error(`Error processing ${type}:`, error);
@@ -154,9 +170,8 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
         title: `Failed to process ${type}`,
         description: "An error occurred. Please try another file.",
       });
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false);
   };
 
   const handleGenerateFromText = async () => {
