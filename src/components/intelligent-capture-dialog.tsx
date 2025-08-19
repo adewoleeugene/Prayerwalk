@@ -19,6 +19,7 @@ import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { suggestCategory } from '@/ai/flows/suggest-category-flow';
 import { analyzeSermonDocument } from '@/ai/flows/analyze-sermon-document';
+import mammoth from 'mammoth';
 
 
 type IntelligentCaptureDialogProps = {
@@ -78,60 +79,78 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
 
     setIsLoading(true);
     setResult(null);
-
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onloadend = async () => {
-      const dataUri = reader.result as string;
-      try {
-        if (type === 'image') {
-          setLoadingMessage('Analyzing image...');
-          const response = await convertImageTextToPrayerPoints({ photoDataUri: dataUri });
+    
+    try {
+      if (type === 'document' && (file.name.endsWith('.docx'))) {
+          setLoadingMessage('Analyzing document...');
+          const arrayBuffer = await file.arrayBuffer();
+          const mammothResult = await mammoth.extractRawText({ arrayBuffer });
+          const text = mammothResult.value;
+          
+          const response = await generatePrayerPointsFromText({ text: text });
           setResult({
-            title: captureTitle,
-            sourceType: 'image',
-            sourceData: dataUri,
-            notes: response.extractedText,
-            prayerPoints: response.prayerPoints,
-          });
-          setEditableNotes(response.extractedText);
-          setSelectedPoints(response.prayerPoints.map((_, i) => i));
-        } else if (type === 'audio') {
-          setLoadingMessage('Transcribing audio...');
-          const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
-          setResult({
-            title: captureTitle,
-            sourceType: 'audio',
-            sourceData: dataUri,
-            notes: response.notes,
-            prayerPoints: response.prayerPoints,
+              title: file.name,
+              sourceType: 'document',
+              notes: response.notes,
+              prayerPoints: response.prayerPoints,
           });
           setEditableNotes(response.notes);
           setSelectedPoints(response.prayerPoints.map((_, i) => i));
-        } else if (type === 'document') {
-            setLoadingMessage('Analyzing document...');
-            const response = await analyzeSermonDocument({ documentDataUri: dataUri });
+
+      } else {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onloadend = async () => {
+          const dataUri = reader.result as string;
+          if (type === 'image') {
+            setLoadingMessage('Analyzing image...');
+            const response = await convertImageTextToPrayerPoints({ photoDataUri: dataUri });
             setResult({
-                title: response.title || captureTitle,
-                sourceType: 'document',
-                sourceData: dataUri,
-                notes: response.coreMessageSummary,
-                prayerPoints: response.prayerPoints.map(p => ({ point: p, bibleVerse: ''})),
+              title: captureTitle,
+              sourceType: 'image',
+              sourceData: dataUri,
+              notes: response.extractedText,
+              prayerPoints: response.prayerPoints,
             });
-            setEditableNotes(response.coreMessageSummary);
+            setEditableNotes(response.extractedText);
             setSelectedPoints(response.prayerPoints.map((_, i) => i));
+          } else if (type === 'audio') {
+            setLoadingMessage('Transcribing audio...');
+            const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
+            setResult({
+              title: captureTitle,
+              sourceType: 'audio',
+              sourceData: dataUri,
+              notes: response.notes,
+              prayerPoints: response.prayerPoints,
+            });
+            setEditableNotes(response.notes);
+            setSelectedPoints(response.prayerPoints.map((_, i) => i));
+          } else if (type === 'document') { // This will now handle PDFs
+              setLoadingMessage('Analyzing document...');
+              const response = await analyzeSermonDocument({ documentDataUri: dataUri });
+              setResult({
+                  title: response.title || captureTitle,
+                  sourceType: 'document',
+                  sourceData: dataUri,
+                  notes: response.coreMessageSummary,
+                  prayerPoints: response.prayerPoints.map(p => ({ point: p, bibleVerse: ''})),
+              });
+              setEditableNotes(response.coreMessageSummary);
+              setSelectedPoints(response.prayerPoints.map((_, i) => i));
+          }
         }
-      } catch (error) {
-        console.error(`Error processing ${type}:`, error);
-        toast({
-          variant: "destructive",
-          title: `Failed to process ${type}`,
-          description: "An error occurred. Please try another file.",
-        });
-      } finally {
-        setIsLoading(false);
       }
-    };
+    } catch (error) {
+      console.error(`Error processing ${type}:`, error);
+      toast({
+        variant: "destructive",
+        title: `Failed to process ${type}`,
+        description: "An error occurred. Please try another file.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGenerateFromText = async () => {
