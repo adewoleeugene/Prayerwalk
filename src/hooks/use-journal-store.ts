@@ -12,13 +12,15 @@ function createStore<T>(key: string, initialState: T) {
     let state = initialState;
     const listeners = new Set<() => void>();
 
-    try {
-        const storedValue = localStorage.getItem(key);
-        if (storedValue) {
-            state = JSON.parse(storedValue);
+    if (typeof window !== 'undefined') {
+        try {
+            const storedValue = localStorage.getItem(key);
+            if (storedValue) {
+                state = JSON.parse(storedValue);
+            }
+        } catch (error) {
+            console.error(`Failed to load '${key}' from localStorage`, error);
         }
-    } catch (error) {
-        console.error(`Failed to load '${key}' from localStorage`, error);
     }
 
     const subscribe = (listener: () => void) => {
@@ -57,10 +59,12 @@ function createStore<T>(key: string, initialState: T) {
             }
 
             state = newValue;
-            try {
-                localStorage.setItem(key, JSON.stringify(state));
-            } catch (error) {
-                 console.error(`Failed to save '${key}' to localStorage`, error);
+            if (typeof window !== 'undefined') {
+                try {
+                    localStorage.setItem(key, JSON.stringify(state));
+                } catch (error) {
+                     console.error(`Failed to save '${key}' to localStorage`, error);
+                }
             }
             emitChange();
         },
