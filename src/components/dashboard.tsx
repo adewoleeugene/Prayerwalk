@@ -73,14 +73,18 @@ export function Dashboard({ onCaptureClick }: DashboardProps) {
                     count={answeredCount}
                     onClick={() => setSelectedView('answered')}
                   />
-                  {categories.map(category => (
-                    <CategoryCard
-                      key={category.id}
-                      name={category.name}
-                      icon={category.icon}
-                      count={prayers.filter(p => p.categoryId === category.id && p.status === 'active').length}
-                      onClick={() => setSelectedView(category.id)}
-                    />
+                  {categories
+                    .filter(category =>
+                      prayers.some(p => p.categoryId === category.id && p.status === 'active')
+                    )
+                    .map(category => (
+                      <CategoryCard
+                        key={category.id}
+                        name={category.name}
+                        icon={category.icon}
+                        count={prayers.filter(p => p.categoryId === category.id && p.status === 'active').length}
+                        onClick={() => setSelectedView(category.id)}
+                      />
                   ))}
                 </div>
               </div>
