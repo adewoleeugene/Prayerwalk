@@ -77,12 +77,20 @@ const analyzePrayerActivityFlow = ai.defineFlow(
   },
   async ({ recentPrayers, answeredPrayers, categories }) => {
     
-    // Generate AI summary
-    const { output } = await prompt({ recentPrayers, answeredPrayers, categories });
-    const summary = output?.summary || "No recent activity to analyze.";
+    try {
+      // Generate AI summary
+      const { output } = await prompt({ recentPrayers, answeredPrayers, categories });
+      const summary = output?.summary || "Keep going! Your consistency in prayer is wonderful.";
 
-    return {
-      summary,
-    };
+      return {
+        summary,
+      };
+    } catch (error) {
+      console.error("Error analyzing prayer activity:", error);
+      // Return a graceful fallback if the AI model fails
+      return {
+        summary: "Could not generate analysis at this time. Keep up your prayer practice!",
+      };
+    }
   }
 );
