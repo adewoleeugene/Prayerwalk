@@ -30,6 +30,7 @@ export default function PrayerWalkPage() {
   const [sessionSubtitle, setSessionSubtitle] = useState("My Walk With God");
   const [isSessionEnded, setIsSessionEnded] = useState(false);
   const [startTime, setStartTime] = useState(0);
+  const [elapsedTime, setElapsedTime] = useState(0);
 
   const [api, setApi] = React.useState<CarouselApi>()
   const [current, setCurrent] = React.useState(0)
@@ -47,6 +48,16 @@ export default function PrayerWalkPage() {
       setCurrent(api.selectedScrollSnap() + 1)
     })
   }, [api])
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (startTime && !isSessionEnded) {
+      timer = setInterval(() => {
+        setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [startTime, isSessionEnded]);
 
 
   React.useEffect(() => {
@@ -85,29 +96,35 @@ export default function PrayerWalkPage() {
     }
     return `${secs} second${secs > 1 ? 's': ''}`;
   }
+  
+  const formatTimer = (seconds: number) => {
+    const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const secs = (seconds % 60).toString().padStart(2, '0');
+    return `${mins}:${secs}`;
+  };
 
   const handleEndSession = () => {
-    const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
-    setLastSessionDuration(elapsedTime);
+    const finalElapsedTime = Math.floor((Date.now() - startTime) / 1000);
+    setLastSessionDuration(finalElapsedTime);
     addJournalEntry({
       title: `${sessionTitle} Prayer Walk`,
       sourceType: 'live',
-      notes: `Completed a prayer walk session for ${formatTime(elapsedTime)}.`,
+      notes: `Completed a prayer walk session for ${formatTime(finalElapsedTime)}.`,
       prayerPoints: sessionPrayers.slice(0, current).map(p => ({ point: p.title, bibleVerse: p.bibleVerse || '' })),
       categoryId: categoryId,
-      duration: elapsedTime,
+      duration: finalElapsedTime,
     });
     setIsSessionEnded(true);
   };
   
   const SessionCompleteContent = () => {
-      const elapsedTime = Math.floor((Date.now() - startTime) / 1000);
+      const finalElapsedTime = Math.floor((Date.now() - startTime) / 1000);
       return (
         <AlertDialogContent className="p-0 gap-0">
              <AlertDialogHeader className="text-center p-6 pb-4">
                 <AlertDialogTitle className="text-3xl font-bold font-headline">Session Complete!</AlertDialogTitle>
                 <AlertDialogDescription className="mt-2">
-                     You prayed for {formatTime(elapsedTime)} through {sessionPrayers.length} prayer point(s).
+                     You prayed for {formatTime(finalElapsedTime)} through {current} prayer point(s).
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter className="p-4 pt-0">
@@ -149,7 +166,10 @@ export default function PrayerWalkPage() {
                  <Button variant="ghost" size="icon" onClick={() => router.back()}>
                     <ArrowLeft />
                 </Button>
-                <h1 className="text-xl font-bold font-headline text-center">Today's Prayer Session</h1>
+                <div className="text-center">
+                    <h1 className="text-xl font-bold font-headline">Prayer Session</h1>
+                    <p className="text-sm text-muted-foreground font-mono">{formatTimer(elapsedTime)}</p>
+                </div>
                 <Button variant="destructive" size="sm" onClick={handleEndSession}>End</Button>
             </header>
             
