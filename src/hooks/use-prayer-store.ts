@@ -76,10 +76,7 @@ function useSyncedState<T>(key: string, initialState: T): [T, (value: T | ((prev
     const handleStorageChange = (event: StorageEvent) => {
       if (event.storageArea === window.localStorage && event.key === key && event.newValue) {
         try {
-          // Prevent infinite loop by checking if the state is already the same
-          if(event.newValue !== JSON.stringify(state)) {
-             setState(JSON.parse(event.newValue));
-          }
+          setState(JSON.parse(event.newValue));
         } catch (error) {
           console.error(`Failed to parse stored value for '${key}'`, error);
         }
@@ -89,7 +86,6 @@ function useSyncedState<T>(key: string, initialState: T): [T, (value: T | ((prev
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   return [state, setSyncedState, isLoaded];
@@ -170,15 +166,8 @@ export const usePrayerStore = () => {
   const addCategory = async (category: Omit<Category, 'id' | 'icon'>) => {
     const categoryId = category.name.toLowerCase().replace(/\s+/g, '-');
     
-    // 1. Get the current state directly
-    let currentCategories: Category[] = [];
-    setCategories(prev => {
-        currentCategories = prev;
-        return prev;
-    });
-
-    // 2. Perform the check outside the setState updater
-    if (currentCategories.some(c => c.id === categoryId)) {
+    // 1. Get the current state directly from the hook's state variable.
+    if (categories.some(c => c.id === categoryId)) {
         console.error("Category already exists");
         throw new Error("Category with this name already exists.");
     }
