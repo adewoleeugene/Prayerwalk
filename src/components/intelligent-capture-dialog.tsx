@@ -81,65 +81,71 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     setResult(null);
     
     try {
-      if (type === 'document' && (file.name.endsWith('.docx'))) {
-          setLoadingMessage('Analyzing document...');
-          const arrayBuffer = await file.arrayBuffer();
-          const mammothResult = await mammoth.extractRawText({ arrayBuffer });
-          const text = mammothResult.value;
-          
-          const response = await generatePrayerPointsFromText({ text: text });
-          setResult({
-              title: file.name,
-              sourceType: 'document',
-              notes: response.notes,
-              prayerPoints: response.prayerPoints,
-          });
-          setEditableNotes(response.notes);
-          setSelectedPoints(response.prayerPoints.map((_, i) => i));
+        if (type === 'document') {
+            if (file.name.endsWith('.docx')) {
+                setLoadingMessage('Analyzing document...');
+                const arrayBuffer = await file.arrayBuffer();
+                const { value: text } = await mammoth.extractRawText({ arrayBuffer });
+                
+                const response = await generatePrayerPointsFromText({ text });
+                setResult({
+                    title: file.name,
+                    sourceType: 'document',
+                    notes: response.notes,
+                    prayerPoints: response.prayerPoints,
+                });
+                setEditableNotes(response.notes);
+                setSelectedPoints(response.prayerPoints.map((_, i) => i));
 
-      } else {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onloadend = async () => {
-          const dataUri = reader.result as string;
-          if (type === 'image') {
-            setLoadingMessage('Analyzing image...');
-            const response = await convertImageTextToPrayerPoints({ photoDataUri: dataUri });
-            setResult({
-              title: captureTitle,
-              sourceType: 'image',
-              sourceData: dataUri,
-              notes: response.extractedText,
-              prayerPoints: response.prayerPoints,
-            });
-            setEditableNotes(response.extractedText);
-            setSelectedPoints(response.prayerPoints.map((_, i) => i));
-          } else if (type === 'audio') {
-            setLoadingMessage('Transcribing audio...');
-            const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
-            setResult({
-              title: captureTitle,
-              sourceType: 'audio',
-              sourceData: dataUri,
-              notes: response.notes,
-              prayerPoints: response.prayerPoints,
-            });
-            setEditableNotes(response.notes);
-            setSelectedPoints(response.prayerPoints.map((_, i) => i));
-          } else if (type === 'document') { // This will now handle PDFs
-              setLoadingMessage('Analyzing document...');
-              const response = await analyzeSermonDocument({ documentDataUri: dataUri });
-              setResult({
-                  title: response.title || captureTitle,
-                  sourceType: 'document',
-                  sourceData: dataUri,
-                  notes: response.coreMessageSummary,
-                  prayerPoints: response.prayerPoints.map(p => ({ point: p, bibleVerse: ''})),
-              });
-              setEditableNotes(response.coreMessageSummary);
-              setSelectedPoints(response.prayerPoints.map((_, i) => i));
-          }
-        }
+            } else { // Handles PDF and other potential document types
+                 const reader = new FileReader();
+                 reader.readAsDataURL(file);
+                 reader.onloadend = async () => {
+                    const dataUri = reader.result as string;
+                    setLoadingMessage('Analyzing PDF document...');
+                    const response = await analyzeSermonDocument({ documentDataUri: dataUri });
+                    setResult({
+                        title: response.title || captureTitle,
+                        sourceType: 'document',
+                        sourceData: dataUri,
+                        notes: response.coreMessageSummary,
+                        prayerPoints: response.prayerPoints.map(p => ({ point: p, bibleVerse: ''})),
+                    });
+                    setEditableNotes(response.coreMessageSummary);
+                    setSelectedPoints(response.prayerPoints.map((_, i) => i));
+                 }
+            }
+        } else { // Handles Image and Audio
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onloadend = async () => {
+                const dataUri = reader.result as string;
+                if (type === 'image') {
+                    setLoadingMessage('Analyzing image...');
+                    const response = await convertImageTextToPrayerPoints({ photoDataUri: dataUri });
+                    setResult({
+                        title: captureTitle,
+                        sourceType: 'image',
+                        sourceData: dataUri,
+                        notes: response.extractedText,
+                        prayerPoints: response.prayerPoints,
+                    });
+                    setEditableNotes(response.extractedText);
+                    setSelectedPoints(response.prayerPoints.map((_, i) => i));
+                } else if (type === 'audio') {
+                    setLoadingMessage('Transcribing audio...');
+                    const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
+                    setResult({
+                        title: captureTitle,
+                        sourceType: 'audio',
+                        sourceData: dataUri,
+                        notes: response.notes,
+                        prayerPoints: response.prayerPoints,
+                    });
+                    setEditableNotes(response.notes);
+                    setSelectedPoints(response.prayerPoints.map((_, i) => i));
+                }
+            }
       }
     } catch (error) {
       console.error(`Error processing ${type}:`, error);
