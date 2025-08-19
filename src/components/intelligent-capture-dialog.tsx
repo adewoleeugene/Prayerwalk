@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { convertImageTextToPrayerPoints } from '@/ai/flows/convert-image-text-to-prayer-points';
 import { transcribeAudioToPrayerPoints } from '@/ai/flows/transcribe-audio-to-prayer-points';
-import { extractTextFromDocument } from '@/ai/flows/extract-text-from-document';
+import { analyzeSermonDocument } from '@/ai/flows/analyze-sermon-document';
 import { useToast } from '@/hooks/use-toast';
 import { useJournalStore } from '@/hooks/use-journal-store';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
@@ -109,16 +109,17 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
           setEditableNotes(response.notes);
           setSelectedPoints([]);
         } else if (type === 'document') {
-            setLoadingMessage('Extracting text from document...');
-            const response = await extractTextFromDocument({ documentDataUri: dataUri });
+            setLoadingMessage('Analyzing your document...');
+            const response = await analyzeSermonDocument({ documentDataUri: dataUri });
             setResult({
-                title: captureTitle,
+                title: response.title || captureTitle,
                 sourceType: 'document',
                 sourceData: dataUri,
-                notes: response.notes,
-                prayerPoints: response.prayerPoints,
+                notes: response.coreMessageSummary,
+                prayerPoints: response.prayerPoints.map(p => ({ point: p, bibleVerse: response.scriptureReference })),
             });
-            setEditableNotes(response.notes);
+            setEditableNotes(response.coreMessageSummary);
+            setCaptureTitle(response.title);
             setSelectedPoints([]);
         }
       } catch (error) {
