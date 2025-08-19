@@ -84,40 +84,44 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
     fetchOrLoadVerse();
   }, []);
 
+  const recentPrayerWalks = React.useMemo(() => {
+    if (!isJournalStoreLoaded) return [];
+    return entries.filter(e => e.sourceType === 'live' && e.duration).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }, [entries, isJournalStoreLoaded]);
+
+
   useEffect(() => {
     if (isPrayerStoreLoaded && isJournalStoreLoaded) {
-      const oneWeekAgo = subDays(new Date(), 7);
-      const recentPrayers = prayers.filter(p => new Date(p.createdAt) > oneWeekAgo);
-      const answeredPrayers = prayers.filter(p => p.status === 'answered' && new Date(p.createdAt) > oneWeekAgo);
+        // Only run analysis if there's actual activity
+        if (recentPrayerWalks.length > 0) {
+            const oneWeekAgo = subDays(new Date(), 7);
+            const recentPrayers = prayers.filter(p => new Date(p.createdAt) > oneWeekAgo);
+            const answeredPrayers = prayers.filter(p => p.status === 'answered' && new Date(p.createdAt) > oneWeekAgo);
 
-      if (recentPrayers.length > 0 || answeredPrayers.length > 0) {
-        setIsLoadingAnalysis(true);
-        analyzePrayerActivity({
-          recentPrayers,
-          answeredPrayers,
-          categories
-        }).then(setAnalysis).catch(err => {
-          console.error("Failed to analyze prayer activity", err);
-          setAnalysis(null);
-        }).finally(() => {
-          setIsLoadingAnalysis(false);
-        });
-      } else {
-        setIsLoadingAnalysis(false);
-        setAnalysis(null);
-      }
+            if (recentPrayers.length > 0 || answeredPrayers.length > 0) {
+                setIsLoadingAnalysis(true);
+                analyzePrayerActivity({
+                    recentPrayers,
+                    answeredPrayers,
+                    categories
+                }).then(setAnalysis).catch(err => {
+                    console.error("Failed to analyze prayer activity", err);
+                    setAnalysis(null);
+                }).finally(() => {
+                    setIsLoadingAnalysis(false);
+                });
+            }
+        } else {
+             setIsLoadingAnalysis(false);
+             setAnalysis(null);
+        }
     }
-  }, [isPrayerStoreLoaded, isJournalStoreLoaded, prayers, categories]);
+  }, [isPrayerStoreLoaded, isJournalStoreLoaded, prayers, categories, recentPrayerWalks]);
   
   
-  const lastPrayer = prayers.length > 0 ? prayers[0] : null;
-  const lastPrayerTime = lastPrayer ? new Date(lastPrayer.createdAt) : null;
-  
-  const lastSessionDuration = React.useMemo(() => {
-    if (!isJournalStoreLoaded) return null;
-    const prayerWalks = entries.filter(e => e.sourceType === 'live' && e.duration).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    return prayerWalks.length > 0 ? prayerWalks[0].duration : null;
-  }, [entries, isJournalStoreLoaded]);
+  const lastPrayerWalk = recentPrayerWalks.length > 0 ? recentPrayerWalks[0] : null;
+  const lastPrayerTime = lastPrayerWalk ? new Date(lastPrayerWalk.createdAt) : null;
+  const lastSessionDuration = lastPrayerWalk ? lastPrayerWalk.duration : null;
 
   const lastSessionDurationFormatted = React.useMemo(() => {
     if (!lastSessionDuration) return ["0", "minutes"];
@@ -126,7 +130,7 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
     return [minutes.toString(), unit];
   }, [lastSessionDuration]);
 
-  const showRecentActivity = !!lastPrayerTime || !!lastSessionDuration;
+  const showRecentActivity = !!lastPrayerWalk;
 
   const recentPrayersForDisplay = prayers.filter(p => p.status === 'active').slice(0, 3);
   const userName = user?.displayName || user?.email?.split('@')[0] || 'friend';
