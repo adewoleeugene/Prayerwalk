@@ -53,12 +53,12 @@ export function EditCategoryDialog({ open, onOpenChange, category }: EditCategor
         title: "Category Updated",
         description: `The category has been renamed to "${values.name}".`,
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to update category:", error);
       toast({
         variant: "destructive",
         title: "Failed to update category",
-        description: "An error occurred. Please try again.",
+        description: error.message || "An error occurred. Please try again.",
       });
     } finally {
       setIsSubmitting(false);

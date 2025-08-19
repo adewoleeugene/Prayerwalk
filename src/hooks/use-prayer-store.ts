@@ -159,10 +159,26 @@ export const usePrayerStore = () => {
   };
   
   const updateCategory = async (categoryId: string, updatedData: Partial<Omit<Category, 'id'>>) => {
-    const { iconName } = await suggestIcon({ categoryName: updatedData.name! });
+    const newName = updatedData.name;
+    if (!newName) return;
+
+    const newId = newName.toLowerCase().replace(/\s+/g, '-');
+    if (newId !== categoryId && categories.some(c => c.id === newId)) {
+      throw new Error("A category with that name already exists.");
+    }
+
+    const { iconName } = await suggestIcon({ categoryName: newName });
+    
     setCategories(prev => prev.map(c => 
-      c.id === categoryId ? { ...c, ...updatedData, icon: iconName } : c
+      c.id === categoryId ? { ...c, ...updatedData, id: newId, icon: iconName } : c
     ));
+
+    // Update prayers with the new category ID
+    if (newId !== categoryId) {
+        setPrayers(prev => prev.map(p => 
+            p.categoryId === categoryId ? { ...p, categoryId: newId } : p
+        ));
+    }
   };
   
   const deleteCategory = (categoryId: string) => {
