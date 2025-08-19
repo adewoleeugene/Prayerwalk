@@ -95,7 +95,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
             prayerPoints: response.prayerPoints,
           });
           setEditableNotes(response.extractedText);
-          setSelectedPoints([]);
+          setSelectedPoints(response.prayerPoints.map((_, i) => i));
         } else if (type === 'audio') {
           setLoadingMessage('Transcribing audio...');
           const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
@@ -107,20 +107,21 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
             prayerPoints: response.prayerPoints,
           });
           setEditableNotes(response.notes);
-          setSelectedPoints([]);
+          setSelectedPoints(response.prayerPoints.map((_, i) => i));
         } else if (type === 'document') {
             setLoadingMessage('Analyzing your document...');
             const response = await analyzeSermonDocument({ documentDataUri: dataUri });
+            const prayerPoints = response.prayerPoints.map(p => ({ point: p, bibleVerse: response.scriptureReference || '' }));
             setResult({
                 title: response.title || captureTitle,
                 sourceType: 'document',
                 sourceData: dataUri,
                 notes: response.coreMessageSummary,
-                prayerPoints: response.prayerPoints.map(p => ({ point: p, bibleVerse: response.scriptureReference })),
+                prayerPoints: prayerPoints,
             });
             setEditableNotes(response.coreMessageSummary);
-            setCaptureTitle(response.title);
-            setSelectedPoints([]);
+            setCaptureTitle(response.title || captureTitle);
+            setSelectedPoints(prayerPoints.map((_, i) => i));
         }
       } catch (error) {
         console.error(`Error processing ${type}:`, error);
@@ -152,7 +153,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
             prayerPoints: response.prayerPoints,
           });
           setEditableNotes(response.notes);
-          setSelectedPoints([]);
+          setSelectedPoints(response.prayerPoints.map((_, i) => i));
       } catch (error) {
           console.error("Error generating from text:", error);
           toast({ variant: 'destructive', title: 'Generation Failed' });
@@ -190,7 +191,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
               prayerPoints: response.prayerPoints
             });
             setEditableNotes(response.notes);
-            setSelectedPoints([]);
+            setSelectedPoints(response.prayerPoints.map((_, i) => i));
           } catch (error) {
               console.error("Error transcribing audio:", error);
               toast({ variant: 'destructive', title: 'Transcription Failed' });
@@ -465,3 +466,5 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     </>
   );
 }
+
+    
