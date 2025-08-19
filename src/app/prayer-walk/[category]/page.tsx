@@ -167,8 +167,8 @@ export default function PrayerWalkPage() {
                     <ArrowLeft />
                 </Button>
                 <div className="text-center">
-                    <h1 className="text-xl font-bold font-headline">Prayer Session</h1>
-                    <p className="text-sm text-muted-foreground font-mono">{formatTimer(elapsedTime)}</p>
+                    <h1 className="text-lg font-semibold font-headline">Prayer Session</h1>
+                    <p className="text-3xl font-bold text-primary font-mono tabular-nums">{formatTimer(elapsedTime)}</p>
                 </div>
                 <Button variant="destructive" size="sm" onClick={handleEndSession}>End</Button>
             </header>
