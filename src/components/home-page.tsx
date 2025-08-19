@@ -35,7 +35,7 @@ type StoredVerse = {
 export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const { user } = useAuth();
   const { prayers, categories, isLoaded: isPrayerStoreLoaded, deletePrayer } = usePrayerStore();
-  const { lastSessionDuration, isLoaded: isJournalStoreLoaded } = useJournalStore();
+  const { entries, isLoaded: isJournalStoreLoaded } = useJournalStore();
   const [greeting, setGreeting] = useState('');
   const [dailyVerse, setDailyVerse] = useState<DailyVerse | null>(null);
   const [isLoadingVerse, setIsLoadingVerse] = useState(true);
@@ -113,6 +113,11 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const lastPrayer = prayers.length > 0 ? prayers[0] : null;
   const lastPrayerTime = lastPrayer ? new Date(lastPrayer.createdAt) : null;
   
+  const lastSessionDuration = React.useMemo(() => {
+    const prayerWalks = entries.filter(e => e.sourceType === 'live' && e.duration);
+    return prayerWalks.length > 0 ? prayerWalks[0].duration : null;
+  }, [entries]);
+
   const lastSessionDurationFormatted = React.useMemo(() => {
     if (!lastSessionDuration) return ["0", "minutes"];
     const minutes = Math.floor(lastSessionDuration / 60);
