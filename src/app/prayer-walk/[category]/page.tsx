@@ -20,6 +20,8 @@ export default function PrayerWalkPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const categoryId = params.category as string;
+  const timingMode = searchParams.get('timingMode');
+  const duration = parseInt(searchParams.get('duration') || '5', 10);
   
   const { prayers, categories, isLoaded } = usePrayerStore();
   const { setLastSessionDuration, addJournalEntry } = useJournalStore();
@@ -36,6 +38,8 @@ export default function PrayerWalkPage() {
   const [current, setCurrent] = React.useState(0)
   const [count, setCount] = React.useState(0)
 
+  const [countdown, setCountdown] = useState<number | null>(null);
+
   useEffect(() => {
     if (!api) {
       return
@@ -46,8 +50,20 @@ export default function PrayerWalkPage() {
  
     api.on("select", () => {
       setCurrent(api.selectedScrollSnap() + 1)
+      resetCountdown();
     })
   }, [api])
+
+  const resetCountdown = () => {
+    if (timingMode && sessionPrayers.length > 0) {
+      if (timingMode === 'per_prayer') {
+        setCountdown(duration * 60);
+      } else if (timingMode === 'total') {
+        const timePerPrayer = Math.floor((duration * 60) / sessionPrayers.length);
+        setCountdown(timePerPrayer > 0 ? timePerPrayer : 1);
+      }
+    }
+  };
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -58,6 +74,22 @@ export default function PrayerWalkPage() {
     }
     return () => clearInterval(timer);
   }, [startTime, isSessionEnded]);
+
+  useEffect(() => {
+    let countdownTimer: NodeJS.Timeout;
+    if (countdown !== null && countdown > 0 && !isSessionEnded) {
+      countdownTimer = setInterval(() => {
+        setCountdown(prev => (prev ? prev - 1 : null));
+      }, 1000);
+    } else if (countdown === 0) {
+        if(timingMode === 'per_prayer' && current < count) {
+            api?.scrollNext();
+        } else {
+            handleEndSession();
+        }
+    }
+    return () => clearInterval(countdownTimer);
+  }, [countdown, isSessionEnded, api, current, count, timingMode]);
 
 
   React.useEffect(() => {
@@ -87,6 +119,10 @@ export default function PrayerWalkPage() {
       setStartTime(Date.now());
     }
   }, [isLoaded, prayers, categories, categoryId, searchParams]);
+
+  useEffect(() => {
+    resetCountdown();
+  }, [sessionPrayers, timingMode, duration]);
   
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -111,7 +147,7 @@ export default function PrayerWalkPage() {
       sourceType: 'live',
       notes: `Completed a prayer walk session for ${formatTime(finalElapsedTime)}.`,
       prayerPoints: sessionPrayers.slice(0, current).map(p => ({ point: p.title, bibleVerse: p.bibleVerse || '' })),
-      categoryId: categoryId,
+      categoryId: categoryId === 'shuffle' || categoryId === 'custom' ? undefined : categoryId,
       duration: finalElapsedTime,
     });
     setIsSessionEnded(true);
@@ -171,7 +207,7 @@ export default function PrayerWalkPage() {
             </header>
             
             <main className="flex-1 flex flex-col items-center justify-center space-y-6">
-                <p className="text-5xl font-bold text-primary font-mono tabular-nums -mb-4 z-10">{formatTimer(elapsedTime)}</p>
+                <p className="text-5xl font-bold text-primary font-mono tabular-nums -mb-4 z-10">{formatTimer(countdown ?? elapsedTime)}</p>
                 <div className="w-full max-w-md p-4 pt-12 bg-card rounded-2xl shadow-lg text-center">
                     <div className="flex justify-center mb-4">
                         <div className="w-20 h-20 bg-background rounded-full flex items-center justify-center">
