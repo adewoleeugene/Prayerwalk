@@ -81,11 +81,7 @@ export function Dashboard({ onCaptureClick }: DashboardProps) {
                       onEdit={() => {}}
                       isManageable={false}
                     />
-                    {categories
-                      .filter(category =>
-                        prayers.some(p => p.categoryId === category.id && p.status === 'active')
-                      )
-                      .map(category => (
+                    {categories.map(category => (
                         <CategoryCard
                           key={category.id}
                           category={category}
