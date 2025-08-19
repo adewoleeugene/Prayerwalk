@@ -35,18 +35,20 @@ const extractTextFromDocumentFlow = ai.defineFlow(
     inputSchema: ExtractTextFromDocumentInputSchema,
     outputSchema: z.custom<ExtractTextFromDocumentOutput>(),
   },
-  async input => {
-    const {output} = await ai.generate({
-      prompt: `Extract all text from the following document. Then, analyze the extracted text and suggest prayer points and relevant Bible verses.`,
-      input: [{media: {url: input.documentDataUri}}]
+  async ({ documentDataUri }) => {
+    // Step 1: Extract text from the document
+    const { output } = await ai.generate({
+      prompt: `Extract all text from this document.`,
+      input: [{ media: { url: documentDataUri } }],
     });
+    const extractedText = output?.text || '';
 
-    const extractedText = output?.text || "";
-
+    // If no text is extracted, return an empty result.
     if (!extractedText.trim()) {
-        return { notes: "", prayerPoints: [] };
+      return { notes: '', prayerPoints: [] };
     }
-    
+
+    // Step 2: Generate prayer points from the extracted text
     return await generatePrayerPointsFromText({ text: extractedText });
   }
 );
