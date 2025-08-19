@@ -157,21 +157,17 @@ export default function PrayerWalkPage() {
   const SessionCompleteContent = () => {
       const finalElapsedTime = Math.floor((Date.now() - startTime) / 1000);
       const prayedPoints = sessionPrayers.slice(0, current);
-      const [isAnswering, setIsAnswering] = useState(false);
+      const [answeredPrayers, setAnsweredPrayers] = useState<Set<string>>(new Set());
 
-      const handleMarkAnswered = () => {
-        setIsAnswering(true);
-        prayedPoints.forEach(prayer => {
-            if (prayer.status === 'active') {
-                togglePrayerStatus(prayer.id);
-            }
-        });
-        toast({
-            title: "Prayers Answered!",
-            description: `${prayedPoints.length} prayer(s) have been marked as answered.`,
-        });
-        setIsAnswering(false);
-        router.push('/');
+      const handleMarkAnswered = (prayer: Prayer) => {
+        if (prayer.status === 'active') {
+            togglePrayerStatus(prayer.id);
+            setAnsweredPrayers(prev => new Set(prev).add(prayer.id));
+            toast({
+                title: "Prayer Answered!",
+                description: `"${prayer.title}" marked as answered.`,
+            });
+        }
       };
 
       return (
@@ -186,20 +182,25 @@ export default function PrayerWalkPage() {
                 {prayedPoints.length > 0 && (
                     <ScrollArea className="h-40 border rounded-md p-2">
                          <ul className="space-y-2">
-                            {prayedPoints.map((prayer, index) => (
-                                <li key={index} className="text-sm text-muted-foreground">
-                                   &bull; {prayer.title}
+                            {prayedPoints.map((prayer) => (
+                                <li key={prayer.id} className="flex items-center justify-between text-sm text-muted-foreground p-1">
+                                   <span>&bull; {prayer.title}</span>
+                                   <Button 
+                                     size="sm" 
+                                     variant="outline"
+                                     onClick={() => handleMarkAnswered(prayer)}
+                                     disabled={answeredPrayers.has(prayer.id)}
+                                    >
+                                     <Check className="h-4 w-4 mr-1" />
+                                     {answeredPrayers.has(prayer.id) ? 'Answered' : 'Answer'}
+                                   </Button>
                                 </li>
                             ))}
                         </ul>
                     </ScrollArea>
                 )}
             </CardContent>
-            <AlertDialogFooter className="p-4 pt-0 grid grid-cols-2 gap-2">
-                <Button variant="outline" onClick={handleMarkAnswered} disabled={isAnswering}>
-                    {isAnswering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                    Mark as Answered
-                </Button>
+            <AlertDialogFooter className="p-4 pt-0">
                 <AlertDialogAction onClick={() => router.push('/')} className="w-full">Finish</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
