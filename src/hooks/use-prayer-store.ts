@@ -1,7 +1,7 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { Category, Prayer, Goal } from '@/lib/types';
 import { suggestIcon } from '@/ai/flows/suggest-icon-flow';
 import { suggestAlternativeCategory, SuggestAlternativeCategoryOutput } from '@/ai/flows/suggest-alternative-category-flow';
@@ -23,73 +23,70 @@ export type CategorySuggestion = {
   suggestion: SuggestAlternativeCategoryOutput;
 };
 
+// --- Store Implementation for useSyncExternalStore ---
+function createStore<T>(key: string, initialState: T) {
+    let state = initialState;
+    const listeners = new Set<() => void>();
 
-// Custom hook for cross-tab state synchronization
-function useSyncedState<T>(key: string, initialState: T): [T, (value: T | ((prevState: T) => T)) => void, boolean] {
-  const [state, setState] = useState<T>(initialState);
-  const [isLoaded, setIsLoaded] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
     try {
-      const storedValue = localStorage.getItem(key);
-      if (storedValue) {
-        if (mounted) setState(JSON.parse(storedValue));
-      } else {
-        if (mounted) setState(initialState);
-      }
+        const storedValue = localStorage.getItem(key);
+        if (storedValue) {
+            state = JSON.parse(storedValue);
+        }
     } catch (error) {
-      console.error(`Failed to load '${key}' from localStorage`, error);
-      if (mounted) setState(initialState);
-    } finally {
-       if (mounted) setIsLoaded(true);
+        console.error(`Failed to load '${key}' from localStorage`, error);
     }
-     return () => { mounted = false };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
 
-  const setSyncedState = useCallback((value: T | ((prevState: T) => T)) => {
-    setState(prevState => {
-        const valueToStore = value instanceof Function ? value(prevState) : value;
-
-        // Prevent unnecessary updates if the value hasn't changed
-        if (JSON.stringify(prevState) === JSON.stringify(valueToStore)) {
-            return prevState;
-        }
-
-        try {
-            const serializedValue = JSON.stringify(valueToStore);
-            localStorage.setItem(key, serializedValue);
-            window.dispatchEvent(new StorageEvent('storage', {
-                key: key,
-                newValue: serializedValue,
-                storageArea: window.localStorage,
-            }));
-        } catch (error) {
-            console.error(`Failed to save '${key}' to localStorage`, error);
-        }
-        return valueToStore;
-    });
-  }, [key]);
-  
-  useEffect(() => {
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.storageArea === window.localStorage && event.key === key && event.newValue) {
-        try {
-          setState(JSON.parse(event.newValue));
-        } catch (error) {
-          console.error(`Failed to parse stored value for '${key}'`, error);
-        }
-      }
+    const subscribe = (listener: () => void) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
     };
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [key]);
 
-  return [state, setSyncedState, isLoaded];
+    const emitChange = () => {
+        for (const listener of listeners) {
+            listener();
+        }
+    };
+    
+    // Listen for changes in other tabs
+    if (typeof window !== "undefined") {
+        window.addEventListener('storage', (event) => {
+            if (event.storageArea === localStorage && event.key === key && event.newValue) {
+                try {
+                    state = JSON.parse(event.newValue);
+                    emitChange();
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        });
+    }
+
+    return {
+        get: () => state,
+        set: (value: T | ((prevState: T) => T)) => {
+            const oldValue = state;
+            const newValue = typeof value === 'function' ? (value as (prevState: T) => T)(oldValue) : value;
+
+            if (JSON.stringify(oldValue) === JSON.stringify(newValue)) {
+                return;
+            }
+
+            state = newValue;
+            try {
+                localStorage.setItem(key, JSON.stringify(state));
+            } catch (error) {
+                 console.error(`Failed to save '${key}' to localStorage`, error);
+            }
+            emitChange();
+        },
+        subscribe
+    };
 }
+
+const prayersStore = createStore<Prayer[]>(PRAYERS_STORAGE_KEY, []);
+const categoriesStore = createStore<Category[]>(CATEGORIES_STORAGE_KEY, initialCategories);
+const goalStore = createStore<Goal>(GOAL_STORAGE_KEY, initialGoal);
 
 const deduplicateCategories = (categories: Category[]): Category[] => {
     const seen = new Set<string>();
@@ -102,29 +99,22 @@ const deduplicateCategories = (categories: Category[]): Category[] => {
 
 
 export const usePrayerStore = () => {
-  const [prayers, setPrayers, isPrayersLoaded] = useSyncedState<Prayer[]>(PRAYERS_STORAGE_KEY, []);
-  const [categories, setCategories, isCategoriesLoaded] = useSyncedState<Category[]>(CATEGORIES_STORAGE_KEY, initialCategories);
-  const [goal, setGoal, isGoalLoaded] = useSyncedState<Goal>(GOAL_STORAGE_KEY, initialGoal);
+  const prayers = useSyncExternalStore(prayersStore.subscribe, prayersStore.get);
+  const categories = useSyncExternalStore(categoriesStore.subscribe, categoriesStore.get);
+  const goal = useSyncExternalStore(goalStore.subscribe, goalStore.get);
   
   const [isLoaded, setIsLoaded] = useState(false);
   const [categorySuggestion, setCategorySuggestion] = useState<CategorySuggestion | null>(null);
 
   useEffect(() => {
-    if(isPrayersLoaded && isCategoriesLoaded && isGoalLoaded) {
-      
-      const storedCategories = JSON.parse(localStorage.getItem(CATEGORIES_STORAGE_KEY) || '[]') as Category[];
-      const cleanedCategories = deduplicateCategories(storedCategories);
-
-      if(storedCategories.length !== cleanedCategories.length) {
-          console.log("Corrected duplicate categories in storage.");
-          setCategories(cleanedCategories);
-      } else if (localStorage.getItem(CATEGORIES_STORAGE_KEY) === null) {
-        setCategories(initialCategories);
-      }
-
-      setIsLoaded(true);
+    // Clean up duplicates on first load if necessary
+    const currentCategories = categoriesStore.get();
+    const cleaned = deduplicateCategories(currentCategories);
+    if (currentCategories.length !== cleaned.length) {
+        categoriesStore.set(cleaned);
     }
-  }, [isPrayersLoaded, isCategoriesLoaded, isGoalLoaded, setCategories]);
+    setIsLoaded(true);
+  }, []);
 
   const _addPrayer = (prayer: Omit<Prayer, 'id' | 'createdAt' | 'status'>) => {
     const newPrayer: Prayer = {
@@ -133,7 +123,7 @@ export const usePrayerStore = () => {
       createdAt: new Date().toISOString(),
       status: 'active',
     };
-    setPrayers(prev => [newPrayer, ...prev]);
+    prayersStore.set(prev => [newPrayer, ...prev]);
     return newPrayer;
   }
 
@@ -159,19 +149,19 @@ export const usePrayerStore = () => {
       createdAt: new Date().toISOString(),
       status: 'active',
     }));
-    setPrayers(prev => [...prayersToAdd, ...prev]);
+    prayersStore.set(prev => [...prayersToAdd, ...prev]);
   };
 
   const updatePrayer = (updatedPrayer: Prayer) => {
-    setPrayers(prev => prev.map(p => (p.id === updatedPrayer.id ? updatedPrayer : p)));
+    prayersStore.set(prev => prev.map(p => (p.id === updatedPrayer.id ? updatedPrayer : p)));
   };
 
   const deletePrayer = (prayerId: string) => {
-    setPrayers(prev => prev.filter(p => p.id !== prayerId));
+    prayersStore.set(prev => prev.filter(p => p.id !== prayerId));
   };
   
   const togglePrayerStatus = (prayerId: string) => {
-    setPrayers(prev => prev.map(p => {
+    prayersStore.set(prev => prev.map(p => {
       if (p.id === prayerId) {
         return { ...p, status: p.status === 'active' ? 'answered' : 'active' };
       }
@@ -181,8 +171,9 @@ export const usePrayerStore = () => {
 
   const addCategory = async (category: Omit<Category, 'id' | 'icon'>) => {
     const categoryId = category.name.toLowerCase().replace(/\s+/g, '-');
+    const currentCategories = categoriesStore.get();
     
-    if (categories.some(c => c.id === categoryId)) {
+    if (currentCategories.some(c => c.id === categoryId)) {
         console.error("Category already exists");
         throw new Error("Category with this name already exists.");
     }
@@ -201,15 +192,16 @@ export const usePrayerStore = () => {
       icon: iconName,
     };
     
-    setCategories(prev => [...prev, newCategory]);
+    categoriesStore.set(prev => [...prev, newCategory]);
   };
   
   const updateCategory = async (categoryId: string, updatedData: Partial<Omit<Category, 'id'>>) => {
     const newName = updatedData.name;
     if (!newName) return;
+    const currentCategories = categoriesStore.get();
 
     const newId = newName.toLowerCase().replace(/\s+/g, '-');
-    if (newId !== categoryId && categories.some(c => c.id === newId)) {
+    if (newId !== categoryId && currentCategories.some(c => c.id === newId)) {
       throw new Error("A category with that name already exists.");
     }
 
@@ -221,22 +213,22 @@ export const usePrayerStore = () => {
       console.error("Failed to suggest an icon on update, using default. Error:", error);
     }
     
-    setCategories(prev => prev.map(c => 
+    categoriesStore.set(prev => prev.map(c => 
       c.id === categoryId ? { ...c, ...updatedData, id: newId, icon: iconName } : c
     ));
 
     // Update prayers with the new category ID
     if (newId !== categoryId) {
-        setPrayers(prev => prev.map(p => 
+        prayersStore.set(prev => prev.map(p => 
             p.categoryId === categoryId ? { ...p, categoryId: newId } : p
         ));
     }
   };
   
   const deleteCategory = (categoryId: string) => {
-    setCategories(prev => prev.filter(c => c.id !== categoryId));
+    categoriesStore.set(prev => prev.filter(c => c.id !== categoryId));
     // Also delete prayers in that category
-    setPrayers(prev => prev.filter(p => p.categoryId !== categoryId));
+    prayersStore.set(prev => prev.filter(p => p.categoryId !== categoryId));
   };
   
   const resolveSuggestion = (
@@ -272,10 +264,8 @@ export const usePrayerStore = () => {
     addCategory,
     updateCategory,
     deleteCategory,
-    setGoal,
+    setGoal: goalStore.set,
     categorySuggestion,
     resolveSuggestion,
   };
 };
-
-    

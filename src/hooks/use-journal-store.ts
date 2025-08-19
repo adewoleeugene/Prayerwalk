@@ -1,85 +1,86 @@
 
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useSyncExternalStore } from 'react';
 import { JournalEntry } from '@/lib/types';
 
 const JOURNAL_STORAGE_KEY = 'praysmart-journal';
 const LAST_SESSION_DURATION_KEY = 'praysmart-last-session-duration';
 
-// Custom hook for cross-tab state synchronization
-function useSyncedState<T>(key: string, initialState: T): [T, (value: T | ((prevState: T) => T)) => void, boolean] {
-  const [state, setState] = useState<T>(initialState);
-  const [isLoaded, setIsLoaded] = useState(false);
+// --- Store Implementation for useSyncExternalStore ---
+function createStore<T>(key: string, initialState: T) {
+    let state = initialState;
+    const listeners = new Set<() => void>();
 
-  useEffect(() => {
-    let mounted = true;
     try {
-      const storedValue = localStorage.getItem(key);
-      if (storedValue) {
-        if (mounted) setState(JSON.parse(storedValue));
-      } else {
-        if (mounted) setState(initialState);
-      }
+        const storedValue = localStorage.getItem(key);
+        if (storedValue) {
+            state = JSON.parse(storedValue);
+        }
     } catch (error) {
-      console.error(`Failed to load '${key}' from localStorage`, error);
-      if (mounted) setState(initialState);
-    } finally {
-       if (mounted) setIsLoaded(true);
+        console.error(`Failed to load '${key}' from localStorage`, error);
     }
-     return () => { mounted = false };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
 
-  const setSyncedState = useCallback((value: T | ((prevState: T) => T)) => {
-    setState(prevState => {
-        const valueToStore = value instanceof Function ? value(prevState) : value;
-
-        // Prevent unnecessary updates if the value hasn't changed
-        if (JSON.stringify(prevState) === JSON.stringify(valueToStore)) {
-            return prevState;
-        }
-
-        try {
-            const serializedValue = JSON.stringify(valueToStore);
-            localStorage.setItem(key, serializedValue);
-            window.dispatchEvent(new StorageEvent('storage', {
-                key: key,
-                newValue: serializedValue,
-                storageArea: window.localStorage,
-            }));
-        } catch (error) {
-            console.error(`Failed to save '${key}' to localStorage`, error);
-        }
-        return valueToStore;
-    });
-  }, [key]);
-  
-  useEffect(() => {
-    const handleStorageChange = (event: StorageEvent) => {
-      if (event.storageArea === window.localStorage && event.key === key && event.newValue) {
-        try {
-          setState(JSON.parse(event.newValue));
-        } catch (error) {
-          console.error(`Failed to parse stored value for '${key}'`, error);
-        }
-      }
+    const subscribe = (listener: () => void) => {
+        listeners.add(listener);
+        return () => listeners.delete(listener);
     };
-    window.addEventListener('storage', handleStorageChange);
-    return () => {
-      window.removeEventListener('storage', handleStorageChange);
-    };
-  }, [key]);
 
-  return [state, setSyncedState, isLoaded];
+    const emitChange = () => {
+        for (const listener of listeners) {
+            listener();
+        }
+    };
+
+    // Listen for changes in other tabs
+    if (typeof window !== "undefined") {
+        window.addEventListener('storage', (event) => {
+            if (event.storageArea === localStorage && event.key === key && event.newValue) {
+                try {
+                    state = JSON.parse(event.newValue);
+                    emitChange();
+                } catch (e) {
+                    console.error(e);
+                }
+            }
+        });
+    }
+
+    return {
+        get: () => state,
+        set: (value: T | ((prevState: T) => T)) => {
+            const oldValue = state;
+            const newValue = typeof value === 'function' ? (value as (prevState: T) => T)(oldValue) : value;
+
+            if (JSON.stringify(oldValue) === JSON.stringify(newValue)) {
+                return;
+            }
+
+            state = newValue;
+            try {
+                localStorage.setItem(key, JSON.stringify(state));
+            } catch (error) {
+                 console.error(`Failed to save '${key}' to localStorage`, error);
+            }
+            emitChange();
+        },
+        subscribe
+    };
 }
 
 
-export const useJournalStore = () => {
-  const [entries, setEntries, isEntriesLoaded] = useSyncedState<JournalEntry[]>(JOURNAL_STORAGE_KEY, []);
-  const [lastSessionDuration, setLastSessionDuration, isDurationLoaded] = useSyncedState<number | null>(LAST_SESSION_DURATION_KEY, 0);
+const entriesStore = createStore<JournalEntry[]>(JOURNAL_STORAGE_KEY, []);
+const durationStore = createStore<number | null>(LAST_SESSION_DURATION_KEY, 0);
 
-  const isLoaded = isEntriesLoaded && isDurationLoaded;
+
+export const useJournalStore = () => {
+  const entries = useSyncExternalStore(entriesStore.subscribe, entriesStore.get);
+  const lastSessionDuration = useSyncExternalStore(durationStore.subscribe, durationStore.get);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  useEffect(() => {
+    setIsLoaded(true);
+  }, []);
 
   const addJournalEntry = (entry: Omit<JournalEntry, 'id' | 'createdAt'>) => {
     const newEntry: JournalEntry = {
@@ -87,16 +88,15 @@ export const useJournalStore = () => {
       id: new Date().toISOString() + Math.random(),
       createdAt: new Date().toISOString(),
     };
-    const updatedEntries = [newEntry, ...entries];
-    setEntries(updatedEntries);
+    entriesStore.set(prev => [newEntry, ...prev]);
   };
 
   const deleteJournalEntry = (id: string) => {
-    setEntries(entries.filter(entry => entry.id !== id));
+    entriesStore.set(prev => prev.filter(entry => entry.id !== id));
   };
   
   const updateJournalEntryNotes = (id: string, notes: string) => {
-    setEntries(entries.map(entry => 
+    entriesStore.set(prev => prev.map(entry => 
       entry.id === id ? { ...entry, notes } : entry
     ));
   };
@@ -108,6 +108,6 @@ export const useJournalStore = () => {
     deleteJournalEntry,
     updateJournalEntryNotes,
     lastSessionDuration,
-    setLastSessionDuration
+    setLastSessionDuration: durationStore.set,
   };
 };
