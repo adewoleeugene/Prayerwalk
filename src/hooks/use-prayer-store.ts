@@ -157,6 +157,19 @@ export const usePrayerStore = () => {
     };
     setCategories(prev => [...prev, newCategory]);
   };
+  
+  const updateCategory = async (categoryId: string, updatedData: Partial<Omit<Category, 'id'>>) => {
+    const { iconName } = await suggestIcon({ categoryName: updatedData.name! });
+    setCategories(prev => prev.map(c => 
+      c.id === categoryId ? { ...c, ...updatedData, icon: iconName } : c
+    ));
+  };
+  
+  const deleteCategory = (categoryId: string) => {
+    setCategories(prev => prev.filter(c => c.id !== categoryId));
+    // Also delete prayers in that category
+    setPrayers(prev => prev.filter(p => p.categoryId !== categoryId));
+  };
 
   const setGoal = (newGoal: Partial<Goal>) => {
     setGoalState(prev => ({...prev, ...newGoal}));
@@ -193,6 +206,8 @@ export const usePrayerStore = () => {
     deletePrayer,
     togglePrayerStatus,
     addCategory,
+    updateCategory,
+    deleteCategory,
     setGoal,
     categorySuggestion,
     resolveSuggestion,

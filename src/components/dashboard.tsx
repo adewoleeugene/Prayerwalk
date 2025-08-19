@@ -11,6 +11,8 @@ import { ScrollArea } from './ui/scroll-area';
 import { Skeleton } from './ui/skeleton';
 import { PrayerList } from './prayer-list';
 import { Card, CardContent } from './ui/card';
+import { EditCategoryDialog } from './edit-category-dialog';
+import { Category } from '@/lib/types';
 
 type DashboardProps = {
   onCaptureClick: () => void;
@@ -19,6 +21,7 @@ type DashboardProps = {
 export function Dashboard({ onCaptureClick }: DashboardProps) {
   const { categories, prayers, isLoaded } = usePrayerStore();
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
+  const [categoryToEdit, setCategoryToEdit] = useState<Category | null>(null);
   const [selectedView, setSelectedView] = useState<string | null>(null);
 
   const answeredCount = prayers.filter(p => p.status === 'answered').length;
@@ -29,71 +32,85 @@ export function Dashboard({ onCaptureClick }: DashboardProps) {
   }
 
   return (
-    <div className="flex flex-col min-h-screen">
-      <header className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-        <h1 className="text-xl font-bold font-headline">My Prayer Library</h1>
-        <div className="w-10" />
-      </header>
+    <>
+      <div className="flex flex-col min-h-screen">
+        <header className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+          <h1 className="text-xl font-bold font-headline">My Prayer Library</h1>
+          <div className="w-10" />
+        </header>
 
-      <main className="flex-1">
-        <ScrollArea className="h-[calc(100vh-129px)] md:h-[calc(100vh-65px)]">
-          <div className="p-4 md:p-6">
-            {!isLoaded ? (
-              <div className="space-y-4">
-                 <Skeleton className="h-12 w-full" />
-                 <div className="space-y-4">
-                    <Skeleton className="h-20 w-full" />
-                    <Skeleton className="h-20 w-full" />
-                    <Skeleton className="h-20 w-full" />
-                    <Skeleton className="h-20 w-full" />
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                  <Card
-                    className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border-dashed border-2 border-primary/50 bg-primary/5"
-                    onClick={() => setIsCategoryDialogOpen(true)}
-                  >
-                    <CardContent className="p-4 flex items-center justify-center gap-4 text-primary">
-                      <FolderPlus className="h-6 w-6" />
-                      <h3 className="text-lg font-semibold">Add New Category</h3>
-                    </CardContent>
-                  </Card>
-                
+        <main className="flex-1">
+          <ScrollArea className="h-[calc(100vh-129px)] md:h-[calc(100vh-65px)]">
+            <div className="p-4 md:p-6">
+              {!isLoaded ? (
                 <div className="space-y-4">
-                  <CategoryCard
-                    name="All Prayers"
-                    icon="Sun"
-                    count={allActiveCount}
-                    onClick={() => setSelectedView('all')}
-                  />
-                  <CategoryCard
-                    name="Answered"
-                    icon="CheckCircle"
-                    count={answeredCount}
-                    onClick={() => setSelectedView('answered')}
-                  />
-                  {categories
-                    .filter(category =>
-                      prayers.some(p => p.categoryId === category.id && p.status === 'active')
-                    )
-                    .map(category => (
-                      <CategoryCard
-                        key={category.id}
-                        name={category.name}
-                        icon={category.icon}
-                        count={prayers.filter(p => p.categoryId === category.id && p.status === 'active').length}
-                        onClick={() => setSelectedView(category.id)}
-                      />
-                  ))}
+                   <Skeleton className="h-12 w-full" />
+                   <div className="space-y-4">
+                      <Skeleton className="h-20 w-full" />
+                      <Skeleton className="h-20 w-full" />
+                      <Skeleton className="h-20 w-full" />
+                      <Skeleton className="h-20 w-full" />
+                  </div>
                 </div>
-              </div>
-            )}
-          </div>
-        </ScrollArea>
-      </main>
+              ) : (
+                <div className="space-y-4">
+                    <Card
+                      className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border-dashed border-2 border-primary/50 bg-primary/5"
+                      onClick={() => setIsCategoryDialogOpen(true)}
+                    >
+                      <CardContent className="p-4 flex items-center justify-center gap-4 text-primary">
+                        <FolderPlus className="h-6 w-6" />
+                        <h3 className="text-lg font-semibold">Add New Category</h3>
+                      </CardContent>
+                    </Card>
+                  
+                  <div className="space-y-4">
+                    <CategoryCard
+                      name="All Prayers"
+                      icon="Sun"
+                      count={allActiveCount}
+                      onClick={() => setSelectedView('all')}
+                      onEdit={() => {}}
+                      isManageable={false}
+                    />
+                    <CategoryCard
+                      name="Answered"
+                      icon="CheckCircle"
+                      count={answeredCount}
+                      onClick={() => setSelectedView('answered')}
+                      onEdit={() => {}}
+                      isManageable={false}
+                    />
+                    {categories
+                      .filter(category =>
+                        prayers.some(p => p.categoryId === category.id && p.status === 'active')
+                      )
+                      .map(category => (
+                        <CategoryCard
+                          key={category.id}
+                          category={category}
+                          name={category.name}
+                          icon={category.icon}
+                          count={prayers.filter(p => p.categoryId === category.id && p.status === 'active').length}
+                          onClick={() => setSelectedView(category.id)}
+                          onEdit={() => setCategoryToEdit(category)}
+                          isManageable={true}
+                        />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </main>
+      </div>
 
       <AddCategoryDialog open={isCategoryDialogOpen} onOpenChange={setIsCategoryDialogOpen} />
-    </div>
+      <EditCategoryDialog 
+        open={!!categoryToEdit} 
+        onOpenChange={(isOpen) => !isOpen && setCategoryToEdit(null)}
+        category={categoryToEdit}
+      />
+    </>
   );
 }
