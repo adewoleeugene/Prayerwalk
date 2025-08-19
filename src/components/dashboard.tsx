@@ -37,19 +37,19 @@ export function Dashboard({ onCaptureClick }: DashboardProps) {
 
       <main className="flex-1">
         <ScrollArea className="h-[calc(100vh-129px)] md:h-[calc(100vh-65px)]">
-          <div className="pt-4 md:pt-6">
+          <div className="p-4 md:p-6">
             {!isLoaded ? (
-              <div className="space-y-4 px-4 md:px-6">
+              <div className="space-y-4">
                  <Skeleton className="h-12 w-full" />
-                 <div className="grid grid-cols-2 gap-4">
-                    <Skeleton className="h-28 w-full" />
-                    <Skeleton className="h-28 w-full" />
-                    <Skeleton className="h-28 w-full" />
-                    <Skeleton className="h-28 w-full" />
+                 <div className="space-y-4">
+                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-20 w-full" />
+                    <Skeleton className="h-20 w-full" />
                 </div>
               </div>
             ) : (
-              <div className="space-y-4 px-4 md:px-6">
+              <div className="space-y-4">
                   <Card
                     className="shadow-md hover:shadow-lg transition-shadow duration-300 cursor-pointer border-dashed border-2 border-primary/50 bg-primary/5"
                     onClick={() => setIsCategoryDialogOpen(true)}
@@ -60,7 +60,7 @@ export function Dashboard({ onCaptureClick }: DashboardProps) {
                     </CardContent>
                   </Card>
                 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-4">
                   <CategoryCard
                     name="All Prayers"
                     icon="Sun"
