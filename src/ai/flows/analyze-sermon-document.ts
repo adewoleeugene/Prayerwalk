@@ -26,7 +26,7 @@ const AnalyzeSermonDocumentOutputSchema = z.object({
   coreMessageSummary: z.string().describe("A single paragraph summarizing the main message or central theme of the document."),
   keySpiritualTakeaways: z.array(z.string()).describe("3-5 of the most important spiritual truths or concepts presented."),
   notesAndReflectionPoints: z.array(z.string()).describe("Key phrases, memorable quotes, or reflective questions that encourage personal application and study."),
-  prayerPoints: z.array(z.string()).describe("All specific, actionable prayer points."),
+  prayerPoints: z.array(z.string()).describe("All specific, actionable prayer points, extracted verbatim."),
 });
 export type AnalyzeSermonDocumentOutput = z.infer<typeof AnalyzeSermonDocumentOutputSchema>;
 
@@ -38,7 +38,7 @@ const prompt = ai.definePrompt({
     name: 'analyzeSermonDocumentPrompt',
     input: { schema: z.object({ documentDataUri: z.string() }) },
     output: { schema: AnalyzeSermonDocumentOutputSchema },
-    prompt: `You are an AI assistant built to process sermon-related documents. First, read and analyze the ENTIRE document from start to finish. Then, your goal is to transform the provided content into a structured, actionable spiritual guide for the user. Your output must be a single JSON object based strictly on the input text.
+    prompt: `You are an AI assistant built to process sermon-related documents. First, read and analyze the ENTIRE document from start to finish. Your goal is to transform the provided content into a structured, actionable spiritual guide for the user. Your output must be a single JSON object based strictly on the input text.
 
 Your final output must be in this exact JSON format:
 
@@ -65,11 +65,11 @@ scriptureReference: Extract all specific biblical passages referenced in the tex
 
 coreMessageSummary: Write a single paragraph summarizing the main message or central theme of the document.
 
-keySpiritualTakeaways: Identify and list 3-5 of the most important spiritual truths or concepts presented. Use a bulleted list format.
+keySpiritualTakeaways: Identify and list 3-5 of the most important spiritual truths or concepts presented.
 
-notesAndReflectionPoints: Extract key phrases, memorable quotes, or reflective questions that encourage personal application and study. Format these as a bulleted list.
+notesAndReflectionPoints: Extract key phrases, memorable quotes, or reflective questions that encourage personal application and study.
 
-prayerPoints: Extract all specific, actionable prayer points. Organize them by their respective topics or days if provided in the original text.
+prayerPoints: Extract each specific, actionable prayer point exactly as it is written in the text. Do not summarize, rephrase, or group them.
 
 Input Document Content:
 
@@ -79,7 +79,7 @@ Strict Constraints:
 
 Output must be a single, valid JSON object.
 
-All content must be derived directly from the Input Document Content.
+All content must be derived directly from the Input Document Content. Do not add any new information.
 
 Do not add any explanations or text outside of the JSON structure.`,
 });
