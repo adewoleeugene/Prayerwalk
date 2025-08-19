@@ -66,7 +66,7 @@ function PrayerActivityChart({ hourlyData }: { hourlyData: any[] }) {
                         <Tooltip content={<ChartTooltipContent />} cursor={{fill: 'hsl(var(--primary), 0.2)'}} />
                         <Bar dataKey="total" radius={[4, 4, 0, 0]}>
                             {hourlyData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={focusBar === index ? 'hsl(var(--primary))' : 'hsl(var(--primary), 0.5)'} />
+                                <Cell key={`cell-${index}`} fill={'hsl(var(--primary))'} />
                             ))}
                         </Bar>
                     </BarChart>
