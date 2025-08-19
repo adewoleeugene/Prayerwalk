@@ -10,7 +10,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { extractTextFromDocument } from './extract-text-from-document';
 
 const AnalyzeSermonDocumentInputSchema = z.object({
   documentDataUri: z
@@ -37,7 +36,7 @@ export async function analyzeSermonDocument(input: AnalyzeSermonDocumentInput): 
 
 const prompt = ai.definePrompt({
     name: 'analyzeSermonDocumentPrompt',
-    input: { schema: z.object({ text: z.string() }) },
+    input: { schema: z.object({ documentDataUri: z.string() }) },
     output: { schema: AnalyzeSermonDocumentOutputSchema },
     prompt: `You are an AI assistant built to process sermon-related documents. Your goal is to transform the provided content into a structured, actionable spiritual guide for the user. Your output must be a single JSON object based strictly on the input text.
 
@@ -74,7 +73,7 @@ prayerPoints: Extract all specific, actionable prayer points. Organize them by t
 
 Input Document Content:
 
-{{{text}}}
+{{media url=documentDataUri}}
 
 Strict Constraints:
 
@@ -92,11 +91,8 @@ const analyzeSermonDocumentFlow = ai.defineFlow(
     outputSchema: AnalyzeSermonDocumentOutputSchema,
   },
   async ({ documentDataUri }) => {
-    // Step 1: Extract text from the document using the dedicated flow
-    const { text: extractedText } = await extractTextFromDocument({ documentDataUri });
-
-    // If no text is extracted, return an empty result.
-    if (!extractedText.trim()) {
+    // If no document is provided, return an empty result.
+    if (!documentDataUri) {
       return {
         title: "Empty or Unreadable Document",
         scriptureReference: "",
@@ -108,7 +104,7 @@ const analyzeSermonDocumentFlow = ai.defineFlow(
     }
     
     // Step 2: Analyze the extracted text using the detailed prompt
-    const {output: analysisOutput} = await prompt({ text: extractedText });
+    const {output: analysisOutput} = await prompt({ documentDataUri });
     return analysisOutput!;
   }
 );

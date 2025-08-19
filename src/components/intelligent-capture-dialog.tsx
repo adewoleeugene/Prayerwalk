@@ -18,8 +18,7 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { suggestCategory } from '@/ai/flows/suggest-category-flow';
-import { extractTextFromDocument as extractTextAndGeneratePoints } from '@/ai/flows/extract-text-from-document';
-import { generatePrayerPointsFromText as genPoints } from '@/ai/flows/generate-prayer-points-from-text';
+import { analyzeSermonDocument } from '@/ai/flows/analyze-sermon-document';
 
 
 type IntelligentCaptureDialogProps = {
@@ -110,20 +109,16 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
           setEditableNotes(response.notes);
           setSelectedPoints(response.prayerPoints.map((_, i) => i));
         } else if (type === 'document') {
-            setLoadingMessage('Extracting text from document...');
-            const { text } = await extractTextAndGeneratePoints({ documentDataUri: dataUri });
-            
-            setLoadingMessage('Generating prayer points...');
-            const response = await genPoints({ text });
-
+            setLoadingMessage('Analyzing document...');
+            const response = await analyzeSermonDocument({ documentDataUri: dataUri });
             setResult({
-                title: captureTitle,
+                title: response.title || captureTitle,
                 sourceType: 'document',
                 sourceData: dataUri,
-                notes: response.notes,
-                prayerPoints: response.prayerPoints,
+                notes: response.coreMessageSummary,
+                prayerPoints: response.prayerPoints.map(p => ({ point: p, bibleVerse: ''})),
             });
-            setEditableNotes(response.notes);
+            setEditableNotes(response.coreMessageSummary);
             setSelectedPoints(response.prayerPoints.map((_, i) => i));
         }
       } catch (error) {
