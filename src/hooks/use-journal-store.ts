@@ -8,36 +8,46 @@ const JOURNAL_STORAGE_KEY = 'praysmart-journal';
 const LAST_SESSION_DURATION_KEY = 'praysmart-last-session-duration';
 
 // Custom hook for cross-tab state synchronization
-function useSyncedState<T>(key: string, initialState: T): [T, (value: T) => void, boolean] {
+function useSyncedState<T>(key: string, initialState: T): [T, (value: T | ((prevState: T) => T)) => void, boolean] {
   const [state, setState] = useState<T>(initialState);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
     try {
       const storedValue = localStorage.getItem(key);
       if (storedValue) {
-        setState(JSON.parse(storedValue));
+        if (mounted) setState(JSON.parse(storedValue));
+      } else {
+        if (mounted) setState(initialState);
       }
     } catch (error) {
       console.error(`Failed to load '${key}' from localStorage`, error);
+      if (mounted) setState(initialState);
+    } finally {
+       if (mounted) setIsLoaded(true);
     }
-    setIsLoaded(true);
+     return () => { mounted = false };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
-  const setSyncedState = useCallback((value: T) => {
-    try {
-      const valueToStore = JSON.stringify(value);
-      localStorage.setItem(key, valueToStore);
-      setState(value);
-      // Dispatch storage event to notify other tabs/windows
-      window.dispatchEvent(new StorageEvent('storage', {
-          key: key,
-          newValue: valueToStore,
-          storageArea: window.localStorage,
-      }));
-    } catch (error) {
-      console.error(`Failed to save '${key}' to localStorage`, error);
-    }
+  const setSyncedState = useCallback((value: T | ((prevState: T) => T)) => {
+    setState(prevState => {
+        try {
+            const valueToStore = value instanceof Function ? value(prevState) : value;
+            const serializedValue = JSON.stringify(valueToStore);
+            localStorage.setItem(key, serializedValue);
+            window.dispatchEvent(new StorageEvent('storage', {
+                key: key,
+                newValue: serializedValue,
+                storageArea: window.localStorage,
+            }));
+            return valueToStore;
+        } catch (error) {
+            console.error(`Failed to save '${key}' to localStorage`, error);
+            return prevState;
+        }
+    });
   }, [key]);
   
   useEffect(() => {
