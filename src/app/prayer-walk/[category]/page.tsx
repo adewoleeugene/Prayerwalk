@@ -82,14 +82,14 @@ export default function PrayerWalkPage() {
         setCountdown(prev => (prev ? prev - 1 : null));
       }, 1000);
     } else if (countdown === 0) {
-        if(timingMode === 'per_prayer' && current < count) {
-            api?.scrollNext();
-        } else {
-            handleEndSession();
-        }
+      if (current < count) {
+        api?.scrollNext();
+      } else {
+        handleEndSession();
+      }
     }
     return () => clearInterval(countdownTimer);
-  }, [countdown, isSessionEnded, api, current, count, timingMode]);
+  }, [countdown, isSessionEnded, api, current, count]);
 
 
   React.useEffect(() => {
