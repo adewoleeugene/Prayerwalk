@@ -4,6 +4,7 @@
 import { useState, useEffect } from 'react';
 import { Category, Prayer, Goal } from '@/lib/types';
 import { suggestIcon } from '@/ai/flows/suggest-icon-flow';
+import { suggestAlternativeCategory, SuggestAlternativeCategoryOutput } from '@/ai/flows/suggest-alternative-category-flow';
 
 const PRAYERS_STORAGE_KEY = 'prayersmart-prayers';
 const CATEGORIES_STORAGE_KEY = 'prayersmart-categories';
@@ -20,11 +21,19 @@ const initialGoal: Goal = {
     dailyPrayerTime: 30, // default 30 minutes
 };
 
+// This type is defined here to be accessible by components that use the hook
+// without creating a circular dependency or a separate types file for this one-off case.
+export type CategorySuggestion = {
+  prayer: Omit<Prayer, 'id' | 'createdAt' | 'status'>;
+  suggestion: SuggestAlternativeCategoryOutput;
+};
+
 export const usePrayerStore = () => {
   const [prayers, setPrayers] = useState<Prayer[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [goal, setGoalState] = useState<Goal>(initialGoal);
   const [isLoaded, setIsLoaded] = useState(false);
+  const [categorySuggestion, setCategorySuggestion] = useState<CategorySuggestion | null>(null);
 
   useEffect(() => {
     try {
@@ -79,7 +88,7 @@ export const usePrayerStore = () => {
     }
   }, [goal, isLoaded]);
 
-  const addPrayer = (prayer: Omit<Prayer, 'id' | 'createdAt' | 'status'>) => {
+  const _addPrayer = (prayer: Omit<Prayer, 'id' | 'createdAt' | 'status'>) => {
     const newPrayer: Prayer = {
       ...prayer,
       id: new Date().toISOString() + Math.random(),
@@ -87,6 +96,22 @@ export const usePrayerStore = () => {
       status: 'active',
     };
     setPrayers(prev => [newPrayer, ...prev]);
+    return newPrayer;
+  }
+
+  const addPrayer = async (prayer: Omit<Prayer, 'id' | 'createdAt' | 'status'>) => {
+    const suggestion = await suggestAlternativeCategory({
+        prayerTitle: prayer.title,
+        originalCategoryId: prayer.categoryId,
+        categories: categories.map(c => ({ id: c.id, name: c.name })),
+    });
+
+    if (suggestion.suggestedCategoryId && suggestion.suggestionReason) {
+        setCategorySuggestion({ prayer, suggestion });
+        return null; // Indicates a suggestion is pending
+    } else {
+        return _addPrayer(prayer);
+    }
   };
   
   const addPrayers = (newPrayers: Omit<Prayer, 'id' | 'createdAt' | 'status'>[]) => {
@@ -136,6 +161,26 @@ export const usePrayerStore = () => {
   const setGoal = (newGoal: Partial<Goal>) => {
     setGoalState(prev => ({...prev, ...newGoal}));
   }
+  
+  const resolveSuggestion = (
+    action: 'move' | 'keep_both' | 'keep_current'
+  ) => {
+    if (!categorySuggestion) return;
+
+    const { prayer, suggestion } = categorySuggestion;
+    const { suggestedCategoryId } = suggestion;
+
+    if (action === 'move') {
+      _addPrayer({ ...prayer, categoryId: suggestedCategoryId! });
+    } else if (action === 'keep_both') {
+      _addPrayer(prayer); // Add original
+      _addPrayer({ ...prayer, categoryId: suggestedCategoryId! }); // Add suggested
+    } else if (action === 'keep_current') {
+      _addPrayer(prayer);
+    }
+
+    setCategorySuggestion(null); // Clear the suggestion
+  };
 
   return {
     prayers,
@@ -149,5 +194,7 @@ export const usePrayerStore = () => {
     togglePrayerStatus,
     addCategory,
     setGoal,
+    categorySuggestion,
+    resolveSuggestion,
   };
 };
