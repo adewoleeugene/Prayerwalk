@@ -175,18 +175,20 @@ export const usePrayerStore = () => {
   const addCategory = async (category: Omit<Category, 'id' | 'icon'>) => {
     const categoryId = category.name.toLowerCase().replace(/\s+/g, '-');
     
-    // Check against the current state, not localStorage
-    if (categories.some(c => c.id === categoryId)) {
-        console.error("Category already exists");
-        throw new Error("Category with this name already exists.");
-    }
+    setCategories(currentCategories => {
+        if (currentCategories.some(c => c.id === categoryId)) {
+            console.error("Category already exists");
+            throw new Error("Category with this name already exists.");
+        }
+        return currentCategories; // Return unchanged if check fails, will throw error
+    });
     
     let iconName = 'Folder'; // Default icon
     try {
         const result = await suggestIcon({ categoryName: category.name });
         iconName = result.iconName;
     } catch(error) {
-        console.error("Failed to suggest an icon, using default. Error:", error);
+        console.error("An error occurred while suggesting an icon, using default. Error:", error);
     }
 
     const newCategory: Category = {
