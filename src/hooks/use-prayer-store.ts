@@ -81,7 +81,10 @@ function useSyncedState<T>(key: string, initialState: T): [T, (value: T | ((prev
     const handleStorageChange = (event: StorageEvent) => {
       if (event.storageArea === window.localStorage && event.key === key && event.newValue) {
         try {
-          setState(JSON.parse(event.newValue));
+          // Prevent infinite loop by checking if the state is already the same
+          if(event.newValue !== JSON.stringify(state)) {
+             setState(JSON.parse(event.newValue));
+          }
         } catch (error) {
           console.error(`Failed to parse stored value for '${key}'`, error);
         }
@@ -91,6 +94,7 @@ function useSyncedState<T>(key: string, initialState: T): [T, (value: T | ((prev
     return () => {
       window.removeEventListener('storage', handleStorageChange);
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   return [state, setSyncedState, isLoaded];
@@ -170,12 +174,20 @@ export const usePrayerStore = () => {
 
   const addCategory = async (category: Omit<Category, 'id' | 'icon'>) => {
     const categoryId = category.name.toLowerCase().replace(/\s+/g, '-');
+    
+    // Check against the current state, not localStorage
     if (categories.some(c => c.id === categoryId)) {
-      console.error("Category already exists");
-      throw new Error("Category with this name already exists.");
+        console.error("Category already exists");
+        throw new Error("Category with this name already exists.");
     }
     
-    const { iconName } = await suggestIcon({ categoryName: category.name });
+    let iconName = 'Folder'; // Default icon
+    try {
+        const result = await suggestIcon({ categoryName: category.name });
+        iconName = result.iconName;
+    } catch(error) {
+        console.error("Failed to suggest an icon, using default. Error:", error);
+    }
 
     const newCategory: Category = {
       ...category,
@@ -194,7 +206,13 @@ export const usePrayerStore = () => {
       throw new Error("A category with that name already exists.");
     }
 
-    const { iconName } = await suggestIcon({ categoryName: newName });
+    let iconName = 'Folder';
+    try {
+      const result = await suggestIcon({ categoryName: newName });
+      iconName = result.iconName;
+    } catch (error) {
+      console.error("Failed to suggest an icon on update, using default. Error:", error);
+    }
     
     setCategories(prev => prev.map(c => 
       c.id === categoryId ? { ...c, ...updatedData, id: newId, icon: iconName } : c

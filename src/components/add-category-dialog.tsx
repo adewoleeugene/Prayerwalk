@@ -1,3 +1,4 @@
+
 "use client";
 
 import React from 'react';
@@ -43,12 +44,12 @@ export function AddCategoryDialog({ open, onOpenChange }: AddCategoryDialogProps
         title: "Category Added",
         description: `The "${values.name}" category has been created.`,
       })
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to add category:", error);
       toast({
         variant: "destructive",
         title: "Failed to create category",
-        description: "An error occurred while suggesting an icon. Please try again.",
+        description: error.message || "An unexpected error occurred. Please try again.",
       });
     } finally {
       setIsSubmitting(false);
