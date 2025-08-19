@@ -7,10 +7,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { convertImageTextToPrayerPoints } from '@/ai/flows/convert-image-text-to-prayer-points';
 import { transcribeAudioToPrayerPoints } from '@/ai/flows/transcribe-audio-to-prayer-points';
+import { extractTextFromDocument } from '@/ai/flows/extract-text-from-document';
 import { useToast } from '@/hooks/use-toast';
 import { useJournalStore } from '@/hooks/use-journal-store';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
-import { Loader2, Mic, Upload, Square, NotebookText, Save } from 'lucide-react';
+import { Loader2, Mic, Upload, Square, NotebookText, Save, FileText } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { generatePrayerPointsFromText } from '@/ai/flows/generate-prayer-points-from-text';
 import { Textarea } from './ui/textarea';
@@ -29,7 +30,7 @@ type PrayerPoint = { point: string; bibleVerse: string; };
 
 type CaptureResult = {
   title: string;
-  sourceType: 'text' | 'image' | 'audio' | 'live';
+  sourceType: 'text' | 'image' | 'audio' | 'live' | 'document';
   sourceData?: string;
   notes: string;
   prayerPoints: PrayerPoint[];
@@ -41,6 +42,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   const { toast } = useToast();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
+  const documentInputRef = useRef<HTMLInputElement>(null);
   
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Analyzing...');
@@ -70,7 +72,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'audio') => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'audio' | 'document') => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -94,7 +96,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
           });
           setEditableNotes(response.extractedText);
           setSelectedPoints([]);
-        } else {
+        } else if (type === 'audio') {
           setLoadingMessage('Transcribing audio...');
           const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
           setResult({
@@ -106,6 +108,18 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
           });
           setEditableNotes(response.notes);
           setSelectedPoints([]);
+        } else if (type === 'document') {
+            setLoadingMessage('Extracting text from document...');
+            const response = await extractTextFromDocument({ documentDataUri: dataUri });
+            setResult({
+                title: captureTitle,
+                sourceType: 'document',
+                sourceData: dataUri,
+                notes: response.notes,
+                prayerPoints: response.prayerPoints,
+            });
+            setEditableNotes(response.notes);
+            setSelectedPoints([]);
         }
       } catch (error) {
         console.error(`Error processing ${type}:`, error);
@@ -275,6 +289,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     setTextInput("");
     if (imageInputRef.current) imageInputRef.current.value = "";
     if (audioInputRef.current) audioInputRef.current.value = "";
+    if (documentInputRef.current) documentInputRef.current.value = "";
     setCaptureTitle("");
     setSelectedPoints([]);
     setEditableNotes('');
@@ -389,6 +404,16 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
             </div>
         )
     }
+    
+    if (currentTab === 'file') {
+        return (
+            <div className="text-center space-y-4 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center h-[350px]">
+                <p>Upload a document file (pdf, docx).</p>
+                <Button onClick={() => documentInputRef.current?.click()}><Upload className="mr-2 h-4 w-4"/> Upload File</Button>
+                <input type="file" accept=".pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" ref={documentInputRef} className="hidden" onChange={(e) => handleFileChange(e, 'document')} />
+            </div>
+        );
+    }
 
     if (currentTab === 'live') {
         return (
@@ -421,10 +446,11 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
           <DialogDescription>Save a new journal entry from text, an image, audio file, or live recording.</DialogDescription>
         </DialogHeader>
         <Tabs defaultValue="text" className="w-full" onValueChange={handleTabChange} value={currentTab}>
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="text"><NotebookText className="h-4 w-4 mr-1"/>Text</TabsTrigger>
             <TabsTrigger value="image">Image</TabsTrigger>
             <TabsTrigger value="audio">Audio</TabsTrigger>
+            <TabsTrigger value="file"><FileText className="h-4 w-4 mr-1"/>File</TabsTrigger>
             <TabsTrigger value="live">Live</TabsTrigger>
           </TabsList>
           

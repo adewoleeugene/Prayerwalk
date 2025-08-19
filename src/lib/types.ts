@@ -19,8 +19,8 @@ export interface JournalEntry {
   id: string;
   title: string;
   createdAt: string;
-  sourceType: 'text' | 'image' | 'audio' | 'live';
-  sourceData?: string; // Data URI for image/audio
+  sourceType: 'text' | 'image' | 'audio' | 'live' | 'document';
+  sourceData?: string; // Data URI for image/audio/document
   notes: string; // Full transcribed text
   prayerPoints: { point: string; bibleVerse: string; }[];
   categoryId?: string;

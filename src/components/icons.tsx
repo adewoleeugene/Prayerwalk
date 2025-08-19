@@ -1,5 +1,5 @@
 
-import { BookOpen, Briefcase, Heart, Users, CheckCircle, PlusCircle, LucideIcon, Folder, Home, Plus, MoreVertical, Sun, FolderPlus, LogOut, Sparkles, Notebook, Settings, Library, User, Mic, Square, NotebookText, Shuffle, ListVideo, Activity, ArrowRight, RotateCcw } from 'lucide-react';
+import { BookOpen, Briefcase, Heart, Users, CheckCircle, PlusCircle, LucideIcon, Folder, Home, Plus, MoreVertical, Sun, FolderPlus, LogOut, Sparkles, Notebook, Settings, Library, User, Mic, Square, NotebookText, Shuffle, ListVideo, Activity, ArrowRight, RotateCcw, FileText } from 'lucide-react';
 
 export const iconMap: { [key: string]: LucideIcon } = {
   BookOpen,
@@ -28,6 +28,7 @@ export const iconMap: { [key: string]: LucideIcon } = {
   Activity,
   ArrowRight,
   RotateCcw,
+  FileText,
   Default: Heart,
 };
 
