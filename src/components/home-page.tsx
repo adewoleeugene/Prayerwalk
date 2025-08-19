@@ -114,9 +114,10 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const lastPrayerTime = lastPrayer ? new Date(lastPrayer.createdAt) : null;
   
   const lastSessionDuration = React.useMemo(() => {
-    const prayerWalks = entries.filter(e => e.sourceType === 'live' && e.duration);
+    if (!isJournalStoreLoaded) return null;
+    const prayerWalks = entries.filter(e => e.sourceType === 'live' && e.duration).sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     return prayerWalks.length > 0 ? prayerWalks[0].duration : null;
-  }, [entries]);
+  }, [entries, isJournalStoreLoaded]);
 
   const lastSessionDurationFormatted = React.useMemo(() => {
     if (!lastSessionDuration) return ["0", "minutes"];
@@ -125,6 +126,7 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
     return [minutes.toString(), unit];
   }, [lastSessionDuration]);
 
+  const showRecentActivity = !!lastPrayerTime || !!lastSessionDuration;
 
   const recentPrayersForDisplay = prayers.filter(p => p.status === 'active').slice(0, 3);
   const userName = user?.displayName || user?.email?.split('@')[0] || 'friend';
@@ -178,7 +180,8 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
             </Button>
           </div>
           
-           <div className="space-y-2">
+          {showRecentActivity && (
+            <div className="space-y-2">
               <h2 className="text-lg font-bold font-headline">Recent Activity</h2>
               <Card className="shadow-md cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setView({ type: 'activity' })}>
                   <CardHeader>
@@ -210,6 +213,7 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
                   )}
               </Card>
             </div>
+          )}
           
           <div>
             <h2 className="text-lg font-bold font-headline mb-2">Recent Prayer Points</h2>
