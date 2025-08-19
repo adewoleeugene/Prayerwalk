@@ -175,13 +175,11 @@ export const usePrayerStore = () => {
   const addCategory = async (category: Omit<Category, 'id' | 'icon'>) => {
     const categoryId = category.name.toLowerCase().replace(/\s+/g, '-');
     
-    setCategories(currentCategories => {
-        if (currentCategories.some(c => c.id === categoryId)) {
-            console.error("Category already exists");
-            throw new Error("Category with this name already exists.");
-        }
-        return currentCategories; // Return unchanged if check fails, will throw error
-    });
+    // Perform the check on the current state directly
+    if (categories.some(c => c.id === categoryId)) {
+        console.error("Category already exists");
+        throw new Error("Category with this name already exists.");
+    }
     
     let iconName = 'Folder'; // Default icon
     try {
