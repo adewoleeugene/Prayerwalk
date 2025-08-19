@@ -1,7 +1,7 @@
 
 'use server';
 /**
- * @fileOverview Extracts text from a document and generates prayer points.
+ * @fileOverview Extracts text from a document.
  *
  * - extractTextFromDocument - A function that handles the document processing.
  * - ExtractTextFromDocumentInput - The input type for the function.
@@ -10,8 +10,6 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { generatePrayerPointsFromText, type GeneratePrayerPointsFromTextOutput } from './generate-prayer-points-from-text';
-
 
 const ExtractTextFromDocumentInputSchema = z.object({
   documentDataUri: z
@@ -21,7 +19,11 @@ const ExtractTextFromDocumentInputSchema = z.object({
     ),
 });
 export type ExtractTextFromDocumentInput = z.infer<typeof ExtractTextFromDocumentInputSchema>;
-export type ExtractTextFromDocumentOutput = GeneratePrayerPointsFromTextOutput;
+
+const ExtractTextFromDocumentOutputSchema = z.object({
+    text: z.string().describe("The extracted text from the document."),
+});
+export type ExtractTextFromDocumentOutput = z.infer<typeof ExtractTextFromDocumentOutputSchema>;
 
 
 export async function extractTextFromDocument(input: ExtractTextFromDocumentInput): Promise<ExtractTextFromDocumentOutput> {
@@ -33,22 +35,15 @@ const extractTextFromDocumentFlow = ai.defineFlow(
   {
     name: 'extractTextFromDocumentFlow',
     inputSchema: ExtractTextFromDocumentInputSchema,
-    outputSchema: z.custom<ExtractTextFromDocumentOutput>(),
+    outputSchema: ExtractTextFromDocumentOutputSchema,
   },
   async ({ documentDataUri }) => {
-    // Step 1: Extract text from the document
     const { output } = await ai.generate({
-      prompt: `Extract all text from this document.`,
+      prompt: `Extract all text from this document. Preserve the original structure and formatting as much as possible.`,
       input: [{ media: { url: documentDataUri } }],
     });
     const extractedText = output?.text || '';
 
-    // If no text is extracted, return an empty result.
-    if (!extractedText.trim()) {
-      return { notes: '', prayerPoints: [] };
-    }
-
-    // Step 2: Generate prayer points from the extracted text
-    return await generatePrayerPointsFromText({ text: extractedText });
+    return { text: extractedText };
   }
 );

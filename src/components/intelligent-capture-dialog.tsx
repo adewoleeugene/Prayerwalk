@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { convertImageTextToPrayerPoints } from '@/ai/flows/convert-image-text-to-prayer-points';
 import { transcribeAudioToPrayerPoints } from '@/ai/flows/transcribe-audio-to-prayer-points';
-import { analyzeSermonDocument } from '@/ai/flows/analyze-sermon-document';
 import { useToast } from '@/hooks/use-toast';
 import { useJournalStore } from '@/hooks/use-journal-store';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
@@ -19,6 +18,8 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
 import { suggestCategory } from '@/ai/flows/suggest-category-flow';
+import { extractTextFromDocument as extractTextAndGeneratePoints } from '@/ai/flows/extract-text-from-document';
+import { generatePrayerPointsFromText as genPoints } from '@/ai/flows/generate-prayer-points-from-text';
 
 
 type IntelligentCaptureDialogProps = {
@@ -109,19 +110,21 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
           setEditableNotes(response.notes);
           setSelectedPoints(response.prayerPoints.map((_, i) => i));
         } else if (type === 'document') {
-            setLoadingMessage('Analyzing your document...');
-            const response = await analyzeSermonDocument({ documentDataUri: dataUri });
-            const prayerPoints = response.prayerPoints.map(p => ({ point: p, bibleVerse: response.scriptureReference || '' }));
+            setLoadingMessage('Extracting text from document...');
+            const { text } = await extractTextAndGeneratePoints({ documentDataUri: dataUri });
+            
+            setLoadingMessage('Generating prayer points...');
+            const response = await genPoints({ text });
+
             setResult({
-                title: response.title || captureTitle,
+                title: captureTitle,
                 sourceType: 'document',
                 sourceData: dataUri,
-                notes: response.coreMessageSummary,
-                prayerPoints: prayerPoints,
+                notes: response.notes,
+                prayerPoints: response.prayerPoints,
             });
-            setEditableNotes(response.coreMessageSummary);
-            setCaptureTitle(response.title || captureTitle);
-            setSelectedPoints(prayerPoints.map((_, i) => i));
+            setEditableNotes(response.notes);
+            setSelectedPoints(response.prayerPoints.map((_, i) => i));
         }
       } catch (error) {
         console.error(`Error processing ${type}:`, error);
@@ -466,5 +469,3 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     </>
   );
 }
-
-    

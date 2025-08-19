@@ -10,6 +10,7 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
+import { extractTextFromDocument } from './extract-text-from-document';
 
 const AnalyzeSermonDocumentInputSchema = z.object({
   documentDataUri: z
@@ -91,19 +92,15 @@ const analyzeSermonDocumentFlow = ai.defineFlow(
     outputSchema: AnalyzeSermonDocumentOutputSchema,
   },
   async ({ documentDataUri }) => {
-    // Step 1: Extract text from the document
-    const { output: extractionOutput } = await ai.generate({
-      prompt: `Extract all text from this document.`,
-      input: [{ media: { url: documentDataUri } }],
-    });
-    const extractedText = extractionOutput?.text || '';
+    // Step 1: Extract text from the document using the dedicated flow
+    const { text: extractedText } = await extractTextFromDocument({ documentDataUri });
 
     // If no text is extracted, return an empty result.
     if (!extractedText.trim()) {
       return {
-        title: "Empty Document",
+        title: "Empty or Unreadable Document",
         scriptureReference: "",
-        coreMessageSummary: "No content found in the document.",
+        coreMessageSummary: "No text content could be extracted from the document.",
         keySpiritualTakeaways: [],
         notesAndReflectionPoints: [],
         prayerPoints: [],
@@ -111,7 +108,7 @@ const analyzeSermonDocumentFlow = ai.defineFlow(
     }
     
     // Step 2: Analyze the extracted text using the detailed prompt
-    const { output: analysisOutput } = await prompt({ text: extractedText });
+    const {output: analysisOutput} = await prompt({ text: extractedText });
     return analysisOutput!;
   }
 );
