@@ -127,11 +127,10 @@ export const usePrayerStore = () => {
   }
 
   const addPrayer = async (prayer: Omit<Prayer, 'id' | 'createdAt' | 'status'>) => {
-    const currentCategories = JSON.parse(localStorage.getItem(CATEGORIES_STORAGE_KEY) || '[]') as Category[];
     const suggestion = await suggestAlternativeCategory({
         prayerTitle: prayer.title,
         originalCategoryId: prayer.categoryId,
-        categories: currentCategories.map(c => ({ id: c.id, name: c.name })),
+        categories: categories.map(c => ({ id: c.id, name: c.name })),
     });
 
     if (suggestion.suggestedCategoryId && suggestion.suggestionReason) {
@@ -171,8 +170,7 @@ export const usePrayerStore = () => {
 
   const addCategory = async (category: Omit<Category, 'id' | 'icon'>) => {
     const categoryId = category.name.toLowerCase().replace(/\s+/g, '-');
-    const currentCategories = JSON.parse(localStorage.getItem(CATEGORIES_STORAGE_KEY) || '[]') as Category[];
-    if (currentCategories.some(c => c.id === categoryId)) {
+    if (categories.some(c => c.id === categoryId)) {
       console.error("Category already exists");
       throw new Error("Category with this name already exists.");
     }
@@ -192,8 +190,7 @@ export const usePrayerStore = () => {
     if (!newName) return;
 
     const newId = newName.toLowerCase().replace(/\s+/g, '-');
-    const currentCategories = JSON.parse(localStorage.getItem(CATEGORIES_STORAGE_KEY) || '[]') as Category[];
-    if (newId !== categoryId && currentCategories.some(c => c.id === newId)) {
+    if (newId !== categoryId && categories.some(c => c.id === newId)) {
       throw new Error("A category with that name already exists.");
     }
 
