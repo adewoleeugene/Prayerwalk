@@ -166,15 +166,13 @@ export default function PrayerWalkPage() {
                  <Button variant="ghost" size="icon" onClick={() => router.back()}>
                     <ArrowLeft />
                 </Button>
-                <div className="text-center">
-                    <h1 className="text-lg font-semibold font-headline">Prayer Session</h1>
-                    <p className="text-3xl font-bold text-primary font-mono tabular-nums">{formatTimer(elapsedTime)}</p>
-                </div>
+                <h1 className="text-lg font-semibold font-headline">Prayer Session</h1>
                 <Button variant="destructive" size="sm" onClick={handleEndSession}>End</Button>
             </header>
             
             <main className="flex-1 flex flex-col items-center justify-center space-y-6">
-                <div className="w-full max-w-md p-4 bg-card rounded-2xl shadow-lg text-center">
+                <p className="text-5xl font-bold text-primary font-mono tabular-nums -mb-4 z-10">{formatTimer(elapsedTime)}</p>
+                <div className="w-full max-w-md p-4 pt-12 bg-card rounded-2xl shadow-lg text-center">
                     <div className="flex justify-center mb-4">
                         <div className="w-20 h-20 bg-background rounded-full flex items-center justify-center">
                             <Footprints className="h-10 w-10 text-primary" />
