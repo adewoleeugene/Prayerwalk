@@ -7,7 +7,7 @@ import { Prayer } from '@/lib/types';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Loader2, ArrowLeft, Footprints } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, ArrowLeft, Footprints, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useJournalStore } from '@/hooks/use-journal-store';
@@ -24,7 +24,7 @@ export default function PrayerWalkPage() {
   const timingMode = searchParams.get('timingMode');
   const duration = parseInt(searchParams.get('duration') || '5', 10);
   
-  const { prayers, categories, isLoaded } = usePrayerStore();
+  const { prayers, categories, isLoaded, togglePrayerStatus } = usePrayerStore();
   const { setLastSessionDuration, addJournalEntry } = useJournalStore();
   const { toast } = useToast();
 
@@ -157,6 +157,23 @@ export default function PrayerWalkPage() {
   const SessionCompleteContent = () => {
       const finalElapsedTime = Math.floor((Date.now() - startTime) / 1000);
       const prayedPoints = sessionPrayers.slice(0, current);
+      const [isAnswering, setIsAnswering] = useState(false);
+
+      const handleMarkAnswered = () => {
+        setIsAnswering(true);
+        prayedPoints.forEach(prayer => {
+            if (prayer.status === 'active') {
+                togglePrayerStatus(prayer.id);
+            }
+        });
+        toast({
+            title: "Prayers Answered!",
+            description: `${prayedPoints.length} prayer(s) have been marked as answered.`,
+        });
+        setIsAnswering(false);
+        router.push('/');
+      };
+
       return (
         <AlertDialogContent className="p-0 gap-0">
              <AlertDialogHeader className="text-center p-6 pb-4">
@@ -178,7 +195,11 @@ export default function PrayerWalkPage() {
                     </ScrollArea>
                 )}
             </CardContent>
-            <AlertDialogFooter className="p-4 pt-0">
+            <AlertDialogFooter className="p-4 pt-0 grid grid-cols-2 gap-2">
+                <Button variant="outline" onClick={handleMarkAnswered} disabled={isAnswering}>
+                    {isAnswering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                    Mark as Answered
+                </Button>
                 <AlertDialogAction onClick={() => router.push('/')} className="w-full">Finish</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
