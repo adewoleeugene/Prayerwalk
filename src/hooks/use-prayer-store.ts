@@ -47,16 +47,22 @@ function useSyncedState<T>(key: string, initialState: T): [T, (value: T | ((prev
       console.error(`Failed to load '${key}' from localStorage`, error);
       if (mounted) setState(initialState);
     } finally {
-      if (mounted) setIsLoaded(true);
+       if (mounted) setIsLoaded(true);
     }
-    return () => { mounted = false };
+     return () => { mounted = false };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
   const setSyncedState = useCallback((value: T | ((prevState: T) => T)) => {
     setState(prevState => {
+        const valueToStore = value instanceof Function ? value(prevState) : value;
+
+        // Prevent unnecessary updates if the value hasn't changed
+        if (JSON.stringify(prevState) === JSON.stringify(valueToStore)) {
+            return prevState;
+        }
+
         try {
-            const valueToStore = value instanceof Function ? value(prevState) : value;
             const serializedValue = JSON.stringify(valueToStore);
             localStorage.setItem(key, serializedValue);
             window.dispatchEvent(new StorageEvent('storage', {
@@ -64,11 +70,10 @@ function useSyncedState<T>(key: string, initialState: T): [T, (value: T | ((prev
                 newValue: serializedValue,
                 storageArea: window.localStorage,
             }));
-            return valueToStore;
         } catch (error) {
             console.error(`Failed to save '${key}' to localStorage`, error);
-            return prevState;
         }
+        return valueToStore;
     });
   }, [key]);
   
