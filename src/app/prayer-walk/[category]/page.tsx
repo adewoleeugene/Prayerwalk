@@ -13,6 +13,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useJournalStore } from '@/hooks/use-journal-store';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 
 export default function PrayerWalkPage() {
@@ -155,14 +156,28 @@ export default function PrayerWalkPage() {
   
   const SessionCompleteContent = () => {
       const finalElapsedTime = Math.floor((Date.now() - startTime) / 1000);
+      const prayedPoints = sessionPrayers.slice(0, current);
       return (
         <AlertDialogContent className="p-0 gap-0">
              <AlertDialogHeader className="text-center p-6 pb-4">
                 <AlertDialogTitle className="text-3xl font-bold font-headline">Session Complete!</AlertDialogTitle>
                 <AlertDialogDescription className="mt-2">
-                     You prayed for {formatTime(finalElapsedTime)} through {current} prayer point(s).
+                     You prayed for {formatTime(finalElapsedTime)} through {prayedPoints.length} prayer point(s).
                 </AlertDialogDescription>
             </AlertDialogHeader>
+            <CardContent className="p-4 pt-0">
+                {prayedPoints.length > 0 && (
+                    <ScrollArea className="h-40 border rounded-md p-2">
+                         <ul className="space-y-2">
+                            {prayedPoints.map((prayer, index) => (
+                                <li key={index} className="text-sm text-muted-foreground">
+                                   &bull; {prayer.title}
+                                </li>
+                            ))}
+                        </ul>
+                    </ScrollArea>
+                )}
+            </CardContent>
             <AlertDialogFooter className="p-4 pt-0">
                 <AlertDialogAction onClick={() => router.push('/')} className="w-full">Finish</AlertDialogAction>
             </AlertDialogFooter>
