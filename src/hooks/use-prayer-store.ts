@@ -10,12 +10,7 @@ const PRAYERS_STORAGE_KEY = 'prayersmart-prayers';
 const CATEGORIES_STORAGE_KEY = 'prayersmart-categories';
 const GOAL_STORAGE_KEY = 'prayersmart-goal';
 
-const initialCategories: Category[] = [
-  { id: 'family', name: 'Family', icon: 'Users' },
-  { id: 'work', name: 'Work', icon: 'Briefcase' },
-  { id: 'personal', name: 'Personal', icon: 'Heart' },
-  { id: 'study', name: 'Study', icon: 'BookOpen' },
-];
+const initialCategories: Category[] = [];
 
 const initialGoal: Goal = {
     dailyPrayerTime: 30, // default 30 minutes
@@ -175,12 +170,19 @@ export const usePrayerStore = () => {
   const addCategory = async (category: Omit<Category, 'id' | 'icon'>) => {
     const categoryId = category.name.toLowerCase().replace(/\s+/g, '-');
     
-    // Perform the check on the current state directly
-    if (categories.some(c => c.id === categoryId)) {
+    // 1. Get the current state directly
+    let currentCategories: Category[] = [];
+    setCategories(prev => {
+        currentCategories = prev;
+        return prev;
+    });
+
+    // 2. Perform the check outside the setState updater
+    if (currentCategories.some(c => c.id === categoryId)) {
         console.error("Category already exists");
         throw new Error("Category with this name already exists.");
     }
-    
+
     let iconName = 'Folder'; // Default icon
     try {
         const result = await suggestIcon({ categoryName: category.name });
@@ -194,6 +196,8 @@ export const usePrayerStore = () => {
       id: categoryId,
       icon: iconName,
     };
+
+    // 3. Update state
     setCategories(prev => [...prev, newCategory]);
   };
   
