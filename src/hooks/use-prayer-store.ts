@@ -91,6 +91,15 @@ function useSyncedState<T>(key: string, initialState: T): [T, (value: T | ((prev
   return [state, setSyncedState, isLoaded];
 }
 
+const deduplicateCategories = (categories: Category[]): Category[] => {
+    const seen = new Set<string>();
+    return categories.filter(category => {
+        const isDuplicate = seen.has(category.id);
+        seen.add(category.id);
+        return !isDuplicate;
+    });
+};
+
 
 export const usePrayerStore = () => {
   const [prayers, setPrayers, isPrayersLoaded] = useSyncedState<Prayer[]>(PRAYERS_STORAGE_KEY, []);
@@ -102,10 +111,17 @@ export const usePrayerStore = () => {
 
   useEffect(() => {
     if(isPrayersLoaded && isCategoriesLoaded && isGoalLoaded) {
-      //Ensure initial categories are set if local storage is empty
-      if(localStorage.getItem(CATEGORIES_STORAGE_KEY) === null) {
+      
+      const storedCategories = JSON.parse(localStorage.getItem(CATEGORIES_STORAGE_KEY) || '[]') as Category[];
+      const cleanedCategories = deduplicateCategories(storedCategories);
+
+      if(storedCategories.length !== cleanedCategories.length) {
+          console.log("Corrected duplicate categories in storage.");
+          setCategories(cleanedCategories);
+      } else if (localStorage.getItem(CATEGORIES_STORAGE_KEY) === null) {
         setCategories(initialCategories);
       }
+
       setIsLoaded(true);
     }
   }, [isPrayersLoaded, isCategoriesLoaded, isGoalLoaded, setCategories]);
@@ -166,7 +182,6 @@ export const usePrayerStore = () => {
   const addCategory = async (category: Omit<Category, 'id' | 'icon'>) => {
     const categoryId = category.name.toLowerCase().replace(/\s+/g, '-');
     
-    // 1. Get the current state directly from the hook's state variable.
     if (categories.some(c => c.id === categoryId)) {
         console.error("Category already exists");
         throw new Error("Category with this name already exists.");
@@ -185,8 +200,7 @@ export const usePrayerStore = () => {
       id: categoryId,
       icon: iconName,
     };
-
-    // 3. Update state
+    
     setCategories(prev => [...prev, newCategory]);
   };
   
@@ -263,3 +277,5 @@ export const usePrayerStore = () => {
     resolveSuggestion,
   };
 };
+
+    
