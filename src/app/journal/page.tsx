@@ -1,7 +1,7 @@
 
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useJournalStore } from '@/hooks/use-journal-store';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,18 +9,24 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format, isSameDay } from 'date-fns';
 import { Button } from '@/components/ui/button';
-import { Trash2, ArrowLeft } from 'lucide-react';
+import { Trash2, ArrowLeft, Send, Loader2 } from 'lucide-react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { JournalEntry } from '@/lib/types';
 import { useRouter } from 'next/navigation';
+import { askQuestionOnNotes } from '@/ai/flows/ask-question-on-notes-flow';
+import { Input } from '@/components/ui/input';
 
 export function JournalEntryCard({ entry }: { entry: JournalEntry }) {
   const { deleteJournalEntry, updateJournalEntryNotes } = useJournalStore();
   const { toast } = useToast();
   const [notes, setNotes] = React.useState(entry.notes);
+
+  const [question, setQuestion] = useState("");
+  const [qaHistory, setQaHistory] = useState<{ question: string; answer: string }[]>([]);
+  const [isAsking, setIsAsking] = useState(false);
 
   const handleNotesSave = () => {
     updateJournalEntryNotes(entry.id, notes);
@@ -29,6 +35,26 @@ export function JournalEntryCard({ entry }: { entry: JournalEntry }) {
       description: "Your changes have been saved successfully.",
     });
   };
+
+  const handleAskQuestion = async () => {
+    if (!question.trim()) return;
+
+    setIsAsking(true);
+    try {
+        const result = await askQuestionOnNotes({ notes: entry.notes, question });
+        setQaHistory(prev => [...prev, { question, answer: result.answer }]);
+        setQuestion(""); // Clear input after asking
+    } catch (error) {
+        console.error("Error asking question:", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not get an answer at this time.",
+        });
+    } finally {
+        setIsAsking(false);
+    }
+  }
 
   return (
       <Card className="mb-4">
@@ -103,6 +129,30 @@ export function JournalEntryCard({ entry }: { entry: JournalEntry }) {
                           ) : "No prayer points were generated."}
                       </AccordionContent>
                   </AccordionItem>
+                   <AccordionItem value="q-and-a">
+                        <AccordionTrigger>Ask a Question</AccordionTrigger>
+                        <AccordionContent className="space-y-4">
+                            <div className="space-y-2">
+                                {qaHistory.map((qa, index) => (
+                                    <div key={index} className="space-y-2">
+                                        <p className="p-2 bg-secondary rounded-md text-sm"><strong>You:</strong> {qa.question}</p>
+                                        <p className="p-2 bg-primary/10 rounded-md text-sm"><strong>AI:</strong> {qa.answer}</p>
+                                    </div>
+                                ))}
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Input 
+                                    placeholder="Ask about your notes..."
+                                    value={question}
+                                    onChange={(e) => setQuestion(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleAskQuestion()}
+                                />
+                                <Button onClick={handleAskQuestion} disabled={isAsking} size="icon">
+                                    {isAsking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                                </Button>
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
               </Accordion>
           </CardContent>
       </Card>
