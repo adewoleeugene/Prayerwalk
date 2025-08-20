@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useAuth } from '@/hooks/use-auth';
-import { ChevronRight, LogOut, User } from 'lucide-react';
+import { ChevronRight, LogOut, User, Activity } from 'lucide-react';
 import type { View } from '@/app/page';
 
 export function SettingsPage({ setView }: { setView: (view: View) => void; }) {
@@ -20,13 +20,20 @@ export function SettingsPage({ setView }: { setView: (view: View) => void; }) {
         <Card>
           <CardHeader>
             <CardTitle>Account</CardTitle>
-            <CardDescription>Manage your account and sign out.</CardDescription>
+            <CardDescription>Manage your account, activity, and sign out.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             <Button variant="outline" className="w-full justify-between" onClick={() => setView({ type: 'profile' })}>
               <div className='flex items-center gap-2'>
                 <User className="h-4 w-4" />
                 <span>Profile</span>
+              </div>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+            <Button variant="outline" className="w-full justify-between" onClick={() => setView({ type: 'activity' })}>
+              <div className='flex items-center gap-2'>
+                <Activity className="h-4 w-4" />
+                <span>Activity & Goals</span>
               </div>
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -42,7 +49,7 @@ export function SettingsPage({ setView }: { setView: (view: View) => void; }) {
         <Card>
           <CardHeader>
             <CardTitle>About</CardTitle>
-          </CardHeader>
+          </Header>
           <CardContent>
             <p className="text-sm text-muted-foreground">PraySmart v1.0.0</p>
           </CardContent>
