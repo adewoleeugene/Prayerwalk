@@ -10,7 +10,7 @@ import { transcribeAudioToPrayerPoints } from '@/ai/flows/transcribe-audio-to-pr
 import { useToast } from '@/hooks/use-toast';
 import { useJournalStore } from '@/hooks/use-journal-store';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
-import { Loader2, Mic, Upload, Square, NotebookText, Save, FileText, Image as ImageIcon, Music } from 'lucide-react';
+import { Loader2, Mic, Upload, Square, NotebookText, Save, FileText, Image as ImageIcon, Music, Check } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { generatePrayerPointsFromText } from '@/ai/flows/generate-prayer-points-from-text';
 import { Textarea } from './ui/textarea';
@@ -40,7 +40,7 @@ type CaptureResult = {
 
 export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCaptureDialogProps) {
   const { addJournalEntry } = useJournalStore();
-  const { addPrayers, categories } = usePrayerStore();
+  const { addPrayer, addPrayers, categories } = usePrayerStore();
   const { toast } = useToast();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -54,6 +54,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   const [textInput, setTextInput] = useState("");
   const [captureTitle, setCaptureTitle] = useState("");
   const [selectedPoints, setSelectedPoints] = useState<number[]>([]);
+  const [savedPoints, setSavedPoints] = useState<number[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   
   // Live recording state
@@ -89,7 +90,9 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                 setSelectedCategoryId(suggestion.categoryId);
             } catch (error) {
                 console.error("Failed to suggest category, falling back to default.", error);
-                setSelectedCategoryId(categories[0].id);
+                if (categories.length > 0) {
+                    setSelectedCategoryId(categories[0].id);
+                }
             }
         };
         suggest();
@@ -138,7 +141,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                             prayerPoints: response.prayerPoints.map(p => ({ point: p, bibleVerse: ''})),
                         });
                         setEditableNotes(response.coreMessageSummary);
-                        setSelectedPoints(response.prayerPoints.map((_, i) => i));
+setSelectedPoints(response.prayerPoints.map((_, i) => i));
                     } catch (error) {
                         console.error(`Error processing ${type}:`, error);
                         toast({ variant: "destructive", title: `Failed to process ${type}`, description: "An error occurred. Please try another file." });
@@ -283,7 +286,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     setIsRecording(false);
   };
   
-  const handleSaveEntry = async () => {
+  const handleSaveWholeEntry = async () => {
     if (!result || !selectedCategoryId) {
         toast({ variant: 'destructive', title: 'Cannot Save', description: 'No category selected or no results to save.' });
         return;
@@ -292,17 +295,18 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     setLoadingMessage('Saving entry...');
 
     try {
-      const savedPrayerPoints = selectedPoints.map(index => result.prayerPoints[index]);
+      const unsavedSelectedPoints = selectedPoints.filter(index => !savedPoints.includes(index));
+      const prayersToSave = unsavedSelectedPoints.map(index => result.prayerPoints[index]);
       
-      if (savedPrayerPoints.length > 0) {
-        const prayersToAdd = savedPrayerPoints.map(pp => ({
+      if (prayersToSave.length > 0) {
+        const prayersToAdd = prayersToSave.map(pp => ({
           title: pp.point,
           bibleVerse: pp.bibleVerse,
           categoryId: selectedCategoryId,
           notes: result.sourceType === 'text' ? editableNotes : undefined,
         }));
         
-        addPrayers(prayersToAdd);
+        await addPrayers(prayersToAdd);
       }
       
       addJournalEntry({ 
@@ -310,14 +314,14 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
           notes: editableNotes,
           sourceType: result.sourceType,
           sourceData: result.sourceData,
-          prayerPoints: savedPrayerPoints,
+          prayerPoints: prayersToSave,
           categoryId: selectedCategoryId,
       });
       
       const categoryName = categories.find(c => c.id === selectedCategoryId)?.name || 'a category';
       toast({
         title: "Entry Saved!",
-        description: `Journal entry and ${savedPrayerPoints.length} prayer point(s) added to ${categoryName}.`,
+        description: `Journal entry and ${prayersToSave.length} prayer point(s) added to ${categoryName}.`,
       });
 
 
@@ -332,6 +336,35 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
        });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleSaveIndividualPrayer = async (index: number) => {
+    if (!result || !selectedCategoryId) return;
+
+    const prayerPoint = result.prayerPoints[index];
+    try {
+      await addPrayer({
+        title: prayerPoint.point,
+        bibleVerse: prayerPoint.bibleVerse,
+        categoryId: selectedCategoryId,
+        notes: result.sourceType === 'text' ? editableNotes : undefined,
+      });
+      
+      setSavedPoints(prev => [...prev, index]);
+      
+      toast({
+        title: "Prayer Point Saved",
+        description: `"${prayerPoint.point}" was added to your library.`,
+      });
+
+    } catch (error) {
+       console.error("Error saving individual prayer:", error);
+       toast({
+         variant: "destructive",
+         title: "Save Failed",
+         description: "Could not save the prayer point.",
+       });
     }
   };
   
@@ -350,6 +383,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     if (documentInputRef.current) documentInputRef.current.value = "";
     setCaptureTitle("");
     setSelectedPoints([]);
+    setSavedPoints([]);
     setEditableNotes('');
     setSelectedCategoryId(null);
   }
@@ -384,34 +418,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                 <Label htmlFor="capture-title">Title</Label>
                 <Input id="capture-title" value={captureTitle} onChange={(e) => setCaptureTitle(e.target.value)} />
             </div>
-            <div>
-              <h3 className="font-semibold mb-2">Prayer Points (select to save)</h3>
-              <ScrollArea className="h-32">
-                <div className="space-y-2 p-1">
-                  {result.prayerPoints.length > 0 ? result.prayerPoints.map((p, index) => (
-                    <div 
-                      key={index} 
-                      className="flex items-start space-x-3 p-2 rounded-md border has-[:checked]:bg-secondary cursor-pointer"
-                      onClick={() => handleTogglePrayerPoint(index)}
-                    >
-                      <Checkbox
-                        id={`pp-${index}`}
-                        checked={selectedPoints.includes(index)}
-                        onCheckedChange={() => handleTogglePrayerPoint(index)}
-                        className="mt-1"
-                      />
-                      <div className="grid gap-1.5 leading-none">
-                        <label htmlFor={`pp-${index}`} className="text-sm font-medium leading-none cursor-pointer">
-                          {p.point}
-                        </label>
-                        <p className="text-sm text-muted-foreground">{p.bibleVerse}</p>
-                      </div>
-                    </div>
-                  )) : <p className="text-sm text-muted-foreground text-center py-4">No prayer points generated.</p>}
-                </div>
-              </ScrollArea>
-            </div>
-             <div className="space-y-2">
+            <div className="space-y-2">
                 <Label htmlFor="category-select">Save to Category</Label>
                  <Select
                     value={selectedCategoryId || ''}
@@ -426,9 +433,47 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                     </SelectContent>
                  </Select>
             </div>
+            <div>
+              <h3 className="font-semibold mb-2">Prayer Points</h3>
+              <ScrollArea className="h-40">
+                <div className="space-y-2 p-1">
+                  {result.prayerPoints.length > 0 ? result.prayerPoints.map((p, index) => {
+                    const isSaved = savedPoints.includes(index);
+                    const isSelected = selectedPoints.includes(index);
+                    return (
+                        <div key={index} className="flex items-center space-x-3 p-2 rounded-md border">
+                          <Checkbox
+                            id={`pp-${index}`}
+                            checked={isSelected}
+                            onCheckedChange={() => handleTogglePrayerPoint(index)}
+                            disabled={isSaved}
+                            className="mt-1"
+                          />
+                          <div className="grid gap-1.5 leading-none flex-1">
+                            <label htmlFor={`pp-${index}`} className={cn("text-sm font-medium leading-none", isSaved && "line-through text-muted-foreground")}>
+                              {p.point}
+                            </label>
+                            {p.bibleVerse && <p className="text-sm text-muted-foreground">{p.bibleVerse}</p>}
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            disabled={isSaved || !selectedCategoryId}
+                            onClick={() => handleSaveIndividualPrayer(index)}
+                          >
+                            {isSaved ? <Check className="mr-2 h-4 w-4"/> : <Save className="mr-2 h-4 w-4" />}
+                            {isSaved ? 'Saved' : 'Save'}
+                          </Button>
+                        </div>
+                    );
+                  }) : <p className="text-sm text-muted-foreground text-center py-4">No prayer points generated.</p>}
+                </div>
+              </ScrollArea>
+            </div>
+            
             <div className="grid grid-cols-1 gap-2">
-               <Button onClick={handleSaveEntry} disabled={!selectedCategoryId}>
-                <Save className="mr-2 h-4 w-4"/> Save Entry
+               <Button onClick={handleSaveWholeEntry} disabled={!selectedCategoryId || selectedPoints.filter(i => !savedPoints.includes(i)).length === 0}>
+                <Save className="mr-2 h-4 w-4"/> Save Entry &amp; Selected Point(s)
               </Button>
             </div>
         </div>
@@ -544,4 +589,3 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     </>
   );
 }
-
