@@ -543,7 +543,7 @@ useEffect(() => {
             <div className="text-center space-y-4 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center h-[350px]">
                 <p>Upload a sermon or meeting recording.</p>
                 <Button onClick={() => audioInputRef.current?.click()}><Upload className="mr-2 h-4 w-4"/> Upload Audio</Button>
-                <input type="file" accept="audio/*" ref={audioInputRef} className="hidden" onChange={(e) => handleFileChange(e, 'audio')} />
+                <input type="file" accept="audio/mp3, audio/mpeg, audio/wav, audio/aac, audio/ogg, audio/webm, audio/flac" ref={audioInputRef} className="hidden" onChange={(e) => handleFileChange(e, 'audio')} />
             </div>
         )
     }
