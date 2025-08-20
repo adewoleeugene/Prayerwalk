@@ -27,6 +27,7 @@ export interface JournalEntry {
   prayerPoints: { point: string; bibleVerse: string; }[];
   categoryId?: string;
   duration?: number; // Duration in seconds for prayer walks
+  qaHistory?: { question: string; answer: string; }[];
 }
 
 export interface Goal {

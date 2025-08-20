@@ -20,13 +20,13 @@ import { askQuestionOnNotes } from '@/ai/flows/ask-question-on-notes-flow';
 import { Input } from '@/components/ui/input';
 
 export function JournalEntryCard({ entry }: { entry: JournalEntry }) {
-  const { deleteJournalEntry, updateJournalEntryNotes } = useJournalStore();
+  const { deleteJournalEntry, updateJournalEntryNotes, updateJournalEntryQaHistory } = useJournalStore();
   const { toast } = useToast();
   const [notes, setNotes] = React.useState(entry.notes);
 
   const [question, setQuestion] = useState("");
-  const [qaHistory, setQaHistory] = useState<{ question: string; answer: string }[]>([]);
   const [isAsking, setIsAsking] = useState(false);
+  const qaHistory = entry.qaHistory || [];
 
   const handleNotesSave = () => {
     updateJournalEntryNotes(entry.id, notes);
@@ -42,7 +42,7 @@ export function JournalEntryCard({ entry }: { entry: JournalEntry }) {
     setIsAsking(true);
     try {
         const result = await askQuestionOnNotes({ notes: entry.notes, question });
-        setQaHistory(prev => [...prev, { question, answer: result.answer }]);
+        updateJournalEntryQaHistory(entry.id, { question, answer: result.answer });
         setQuestion(""); // Clear input after asking
     } catch (error) {
         console.error("Error asking question:", error);

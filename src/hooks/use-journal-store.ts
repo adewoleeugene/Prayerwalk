@@ -91,6 +91,7 @@ export const useJournalStore = () => {
       ...entry,
       id: new Date().toISOString() + Math.random(),
       createdAt: new Date().toISOString(),
+      qaHistory: [],
     };
     entriesStore.set(prev => [newEntry, ...prev]);
   };
@@ -105,12 +106,21 @@ export const useJournalStore = () => {
     ));
   };
 
+  const updateJournalEntryQaHistory = (id: string, newQa: { question: string; answer: string; }) => {
+    entriesStore.set(prev => prev.map(entry => 
+      entry.id === id 
+        ? { ...entry, qaHistory: [...(entry.qaHistory || []), newQa] } 
+        : entry
+    ));
+  };
+
   return {
     entries,
     isLoaded,
     addJournalEntry,
     deleteJournalEntry,
     updateJournalEntryNotes,
+    updateJournalEntryQaHistory,
     lastSessionDuration,
     setLastSessionDuration: durationStore.set,
   };
