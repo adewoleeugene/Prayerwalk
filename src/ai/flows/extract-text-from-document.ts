@@ -40,12 +40,10 @@ const extractTextFromDocumentFlow = ai.defineFlow(
   async ({ documentDataUri }) => {
     
     const {text} = await ai.generate({
-      prompt: `Extract all text from this document or audio file. Preserve the original structure and formatting as much as possible.`,
-      input: {
-        media: {
-          url: documentDataUri,
-        }
-      }
+      prompt: `You are a powerful transcription assistant. Transcribe the following audio file accurately.
+      
+      Audio: {{media url=documentDataUri}}`,
+      input: {}
     });
 
     const extractedText = text ?? '';
