@@ -54,7 +54,7 @@ export default function Home() {
       case 'activity':
         return <ActivityPage setView={setView} />;
       case 'journal':
-        return <JournalPage />;
+        return <JournalPage setView={setView} />;
       case 'settings':
         return <SettingsPage setView={setView} />;
       case 'profile':

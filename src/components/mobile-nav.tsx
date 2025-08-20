@@ -17,7 +17,7 @@ export function MobileNav({ activeView, onNavigate, onCaptureClick }: MobileNavP
     { view: { type: 'library' } as View, icon: Library, label: 'Library' },
     // Placeholder for the FAB
     { view: null, icon: null, label: 'Capture' },
-    { view: { type: 'activity' } as View, icon: Activity, label: 'Activity' },
+    { view: { type: 'journal' } as View, icon: NotebookText, label: 'Journal' },
     { view: { type: 'settings' } as View, icon: Settings, label: 'Settings' },
   ];
 

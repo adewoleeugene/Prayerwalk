@@ -15,9 +15,9 @@ import Image from 'next/image';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { JournalEntry } from '@/lib/types';
-import { useRouter } from 'next/navigation';
 import { askQuestionOnNotes } from '@/ai/flows/ask-question-on-notes-flow';
 import { Input } from '@/components/ui/input';
+import type { View } from '@/app/page';
 
 export function JournalEntryCard({ entry }: { entry: JournalEntry }) {
   const { deleteJournalEntry, updateJournalEntryNotes, updateJournalEntryQaHistory } = useJournalStore();
@@ -182,7 +182,7 @@ export function JournalList({ filterDate }: { filterDate?: Date }) {
     if (filteredEntries.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center h-[calc(100vh-400px)] text-center text-muted-foreground">
-              <p className="text-lg font-medium">No Journal Entries for this day</p>
+              <p className="text-lg font-medium">No Journal Entries</p>
               <p className="text-sm">Use the 'Take Note' button to capture your thoughts.</p>
             </div>
         );
@@ -197,15 +197,11 @@ export function JournalList({ filterDate }: { filterDate?: Date }) {
     );
 }
 
-export function JournalPage() {
-    const router = useRouter();
+export function JournalPage({ setView }: { setView: (view: View) => void; }) {
     return (
       <>
-        <header className="flex items-center p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-          <Button variant="ghost" size="icon" onClick={() => router.push('/')}>
-              <ArrowLeft />
-          </Button>
-          <h1 className="text-xl font-bold font-headline mx-auto">Journal</h1>
+        <header className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+          <h1 className="text-xl font-bold font-headline">My Journal</h1>
           <div className="w-10" />
         </header>
         <ScrollArea className="h-[calc(100vh-129px)] md:h-[calc(100vh-65px)]">
