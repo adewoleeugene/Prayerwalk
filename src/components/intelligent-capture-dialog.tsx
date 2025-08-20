@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -21,6 +20,7 @@ import { suggestCategory } from '@/ai/flows/suggest-category-flow';
 import { analyzeSermonDocument } from '@/ai/flows/analyze-sermon-document';
 import mammoth from 'mammoth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { cn } from '@/lib/utils';
 
 
 type IntelligentCaptureDialogProps = {
@@ -589,3 +589,5 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
     </>
   );
 }
+
+    
