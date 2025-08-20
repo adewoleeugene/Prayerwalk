@@ -40,7 +40,7 @@ type CaptureResult = {
 
 export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCaptureDialogProps) {
   const { addJournalEntry } = useJournalStore();
-  const { addPrayer, addPrayers, categories } = usePrayerStore();
+  const { addPrayers, categories } = usePrayerStore();
   const { toast } = useToast();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -54,7 +54,6 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   const [textInput, setTextInput] = useState("");
   const [captureTitle, setCaptureTitle] = useState("");
   const [selectedPoints, setSelectedPoints] = useState<number[]>([]);
-  const [savedPoints, setSavedPoints] = useState<number[]>([]);
   
   // State for individual categories. Key is the prayer point index.
   const [pointCategories, setPointCategories] = useState<Record<number, string>>({});
@@ -295,14 +294,13 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
     setIsRecording(false);
   };
   
-  const handleSaveAllSelected = async () => {
+  const handleSaveEntry = async () => {
     if (!result) return;
     setIsLoading(true);
     setLoadingMessage('Saving entry and prayers...');
 
     try {
-      const unsavedSelectedPointsIndices = selectedPoints.filter(index => !savedPoints.includes(index));
-      const prayersToSave = unsavedSelectedPointsIndices.map(index => {
+      const prayersToSave = selectedPoints.map(index => {
         const prayerPoint = result.prayerPoints[index];
         const categoryId = pointCategories[index];
         return {
@@ -313,8 +311,18 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
         };
       });
 
+      if (prayersToSave.some(p => !p.categoryId)) {
+        toast({
+          variant: 'destructive',
+          title: 'Category Missing',
+          description: 'Please select a category for all selected prayer points.'
+        });
+        setIsLoading(false);
+        return;
+      }
+      
       if (prayersToSave.length > 0) {
-        await addPrayers(prayersToSave);
+        addPrayers(prayersToSave);
       }
       
       // We assume the first selected category for the journal entry itself. This could be improved.
@@ -325,7 +333,7 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
           notes: editableNotes,
           sourceType: result.sourceType,
           sourceData: result.sourceData,
-          prayerPoints: result.prayerPoints.filter((_, index) => unsavedSelectedPointsIndices.includes(index)),
+          prayerPoints: result.prayerPoints.filter((_, index) => selectedPoints.includes(index)),
           categoryId: journalCategoryId,
       });
       
@@ -348,42 +356,6 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
       setIsLoading(false);
     }
   };
-
-  const handleSaveIndividualPrayer = async (index: number) => {
-    if (!result) return;
-
-    const prayerPoint = result.prayerPoints[index];
-    const categoryId = pointCategories[index];
-
-    if (!categoryId) {
-        toast({ variant: 'destructive', title: 'Category Not Selected', description: 'Please select a category for this prayer point.'});
-        return;
-    }
-
-    try {
-      await addPrayer({
-        title: prayerPoint.point,
-        bibleVerse: prayerPoint.bibleVerse,
-        categoryId: categoryId,
-        notes: result.sourceType === 'text' ? editableNotes : undefined,
-      });
-      
-      setSavedPoints(prev => [...prev, index]);
-      
-      toast({
-        title: "Prayer Point Saved",
-        description: `"${prayerPoint.point}" was added to your library.`,
-      });
-
-    } catch (error) {
-       console.error("Error saving individual prayer:", error);
-       toast({
-         variant: "destructive",
-         title: "Save Failed",
-         description: "Could not save the prayer point.",
-       });
-    }
-  };
   
   const handleTogglePrayerPoint = (index: number) => {
     setSelectedPoints(prev => 
@@ -404,7 +376,6 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
     if (documentInputRef.current) documentInputRef.current.value = "";
     setCaptureTitle("");
     setSelectedPoints([]);
-    setSavedPoints([]);
     setEditableNotes('');
     setPointCategories({});
   }
@@ -445,7 +416,6 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
               <ScrollArea className="h-48">
                 <div className="space-y-3 p-1">
                   {result.prayerPoints.length > 0 ? result.prayerPoints.map((p, index) => {
-                    const isSaved = savedPoints.includes(index);
                     const isSelected = selectedPoints.includes(index);
                     const categoryId = pointCategories[index] || '';
                     return (
@@ -454,18 +424,16 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
                             id={`pp-${index}`}
                             checked={isSelected}
                             onCheckedChange={() => handleTogglePrayerPoint(index)}
-                            disabled={isSaved}
                             className="mt-1"
                           />
                           <div className="grid gap-1.5 leading-none flex-1">
-                            <label htmlFor={`pp-${index}`} className={cn("text-sm font-medium leading-none", isSaved && "line-through text-muted-foreground")}>
+                            <label htmlFor={`pp-${index}`} className="text-sm font-medium leading-none">
                               {p.point}
                             </label>
                             {p.bibleVerse && <p className="text-xs text-muted-foreground">{p.bibleVerse}</p>}
                             <Select
                                 value={categoryId}
                                 onValueChange={(value) => handlePointCategoryChange(index, value)}
-                                disabled={isSaved}
                             >
                                 <SelectTrigger className="h-8 text-xs mt-1">
                                     <SelectValue placeholder="Select category..." />
@@ -475,16 +443,6 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
                                 </SelectContent>
                             </Select>
                           </div>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            disabled={isSaved || !categoryId}
-                            onClick={() => handleSaveIndividualPrayer(index)}
-                            className="self-center"
-                          >
-                            {isSaved ? <Check className="mr-2 h-4 w-4"/> : <Save className="mr-2 h-4 w-4" />}
-                            {isSaved ? 'Saved' : 'Save'}
-                          </Button>
                         </div>
                     );
                   }) : <p className="text-sm text-muted-foreground text-center py-4">No prayer points generated.</p>}
@@ -493,7 +451,7 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
             </div>
             
             <div className="grid grid-cols-1 gap-2">
-               <Button onClick={handleSaveAllSelected} disabled={selectedPoints.filter(i => !savedPoints.includes(i)).length === 0}>
+               <Button onClick={handleSaveEntry} disabled={selectedPoints.length === 0}>
                 <Save className="mr-2 h-4 w-4"/> Save Entry &amp; Selected Point(s)
               </Button>
             </div>
