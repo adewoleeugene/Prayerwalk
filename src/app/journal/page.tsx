@@ -63,7 +63,7 @@ export function JournalEntryCard({ entry }: { entry: JournalEntry }) {
                   <div>
                       <CardTitle>{entry.title}</CardTitle>
                       <CardDescription>
-                          Captured via {entry.sourceType} on {format(new Date(entry.createdAt), 'h:mm a')}
+                          Captured via {entry.sourceType} on {format(new Date(entry.createdAt), 'MMMM d, yyyy h:mm a')}
                       </CardDescription>
                   </div>
                   <AlertDialog>
@@ -126,7 +126,7 @@ export function JournalEntryCard({ entry }: { entry: JournalEntry }) {
                                       </li>
                                   ))}
                               </ul>
-                          ) : "No prayer points were generated."}
+                          ) : <p className="text-sm text-muted-foreground">No prayer points were generated for this entry.</p>}
                       </AccordionContent>
                   </AccordionItem>
                    <AccordionItem value="q-and-a">
