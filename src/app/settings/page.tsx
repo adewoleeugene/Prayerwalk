@@ -37,7 +37,7 @@ export function SettingsPage({ setView }: { setView: (view: View) => void; }) {
               </div>
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <Button variant="outline" className="w-full justify-between text-destructive hover:text-destructive" onClick={signOut}>
+            <Button variant="outline" className="w-full justify-between text-destructive hover:text-destructive" onClick={() => signOut()}>
                 <div className='flex items-center gap-2'>
                   <LogOut className="h-4 w-4" />
                   <span>Sign Out</span>
@@ -50,7 +50,7 @@ export function SettingsPage({ setView }: { setView: (view: View) => void; }) {
         <Card>
           <CardHeader>
             <CardTitle>About</CardTitle>
-          </Header>
+          </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">PraySmart v1.0.0</p>
           </CardContent>
