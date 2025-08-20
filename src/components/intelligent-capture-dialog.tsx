@@ -22,6 +22,7 @@ import { analyzeSermonDocument } from '@/ai/flows/analyze-sermon-document';
 import mammoth from 'mammoth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
+import { extractTextFromDocument } from '@/ai/flows/extract-text-from-document';
 
 
 type IntelligentCaptureDialogProps = {
@@ -127,7 +128,29 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                  }
                  return; // Prevent outer finally from running early
             }
-        } else { // Handles Image and Audio
+        } else if (type === 'audio') {
+            setLoadingMessage('Transcribing audio...');
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onloadend = async () => {
+              try {
+                const dataUri = reader.result as string;
+                const { text } = await extractTextFromDocument({ documentDataUri: dataUri });
+                setTextInput(text);
+                setCurrentTab('text');
+                toast({
+                  title: 'Transcription Complete',
+                  description: 'Review the text and generate prayer points.',
+                });
+              } catch (error) {
+                console.error('Error transcribing audio:', error);
+                toast({ variant: 'destructive', title: 'Transcription Failed' });
+              } finally {
+                setIsLoading(false);
+              }
+            };
+            return;
+        } else { // Handles Image
             const reader = new FileReader();
             reader.readAsDataURL(file);
             reader.onloadend = async () => {
@@ -141,18 +164,6 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                             sourceType: 'image',
                             sourceData: dataUri,
                             notes: response.extractedText,
-                            prayerPoints: response.prayerPoints,
-                        });
-                        setSelectedPoints(response.prayerPoints.map((_, i) => i));
-                    } else if (type === 'audio') {
-                        setLoadingMessage('Transcribing audio...');
-                        const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
-                        setResult({
-                            title: captureTitle,
-                            sourceType: 'audio',
-                            sourceData: dataUri,
-                            summary: response.summary,
-                            notes: response.notes,
                             prayerPoints: response.prayerPoints,
                         });
                         setSelectedPoints(response.prayerPoints.map((_, i) => i));

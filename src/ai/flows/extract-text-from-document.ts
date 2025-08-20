@@ -1,9 +1,9 @@
 
 'use server';
 /**
- * @fileOverview Extracts text from a document.
+ * @fileOverview Extracts text from a document or audio file.
  *
- * - extractTextFromDocument - A function that handles the document processing.
+ * - extractTextFromDocument - A function that handles the file processing.
  * - ExtractTextFromDocumentInput - The input type for the function.
  * - ExtractTextFromDocumentOutput - The return type for the function.
  */
@@ -15,13 +15,13 @@ const ExtractTextFromDocumentInputSchema = z.object({
   documentDataUri: z
     .string()
     .describe(
-      "A document file as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
+      "A document or audio file as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
 });
 export type ExtractTextFromDocumentInput = z.infer<typeof ExtractTextFromDocumentInputSchema>;
 
 const ExtractTextFromDocumentOutputSchema = z.object({
-    text: z.string().describe("The extracted text from the document."),
+    text: z.string().describe("The extracted text from the document or audio."),
 });
 export type ExtractTextFromDocumentOutput = z.infer<typeof ExtractTextFromDocumentOutputSchema>;
 
@@ -38,11 +38,17 @@ const extractTextFromDocumentFlow = ai.defineFlow(
     outputSchema: ExtractTextFromDocumentOutputSchema,
   },
   async ({ documentDataUri }) => {
-    const { output } = await ai.generate({
-      prompt: `Extract all text from this document. Preserve the original structure and formatting as much as possible.`,
-      input: [{ media: { url: documentDataUri } }],
+    
+    const {text} = await ai.generate({
+      prompt: `Extract all text from this document or audio file. Preserve the original structure and formatting as much as possible.`,
+      input: {
+        media: {
+          url: documentDataUri,
+        }
+      }
     });
-    const extractedText = output?.text || '';
+
+    const extractedText = text ?? '';
 
     return { text: extractedText };
   }
