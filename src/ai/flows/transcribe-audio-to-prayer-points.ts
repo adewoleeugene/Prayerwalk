@@ -48,7 +48,8 @@ const prompt = ai.definePrompt({
 
 Format your response as a single JSON object.
 
-Audio: {{media url=audioDataUri}}
+Audio:
+{{media url=audioDataUri}}
 `
 });
 
