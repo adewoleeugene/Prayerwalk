@@ -1,15 +1,15 @@
+
 'use server';
 /**
- * @fileOverview A flow that transcribes short audio and generates prayer points.
+ * @fileOverview A flow that transcribes short audio, generates a summary, and creates prayer points.
  *
  * - transcribeAudioToPrayerPoints - A function that handles the audio transcription and prayer point generation.
- * - TranscribeAudioToPrayerPointsInput - The input type for the transcribeAudioToPrayerPoints function.
- * - TranscribeAudioToPrayerPointsOutput - The return type for the transcribeAudioToPrayerPoints function.
+ * - TranscribeAudioToPrayerPointsInput - The input type for the function.
+ * - TranscribeAudioToPrayerPointsOutput - The return type for the function.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import { generatePrayerPointsFromText, type GeneratePrayerPointsFromTextOutput } from './generate-prayer-points-from-text';
 
 const TranscribeAudioToPrayerPointsInputSchema = z.object({
   audioDataUri: z
@@ -20,30 +20,52 @@ const TranscribeAudioToPrayerPointsInputSchema = z.object({
 });
 export type TranscribeAudioToPrayerPointsInput = z.infer<typeof TranscribeAudioToPrayerPointsInputSchema>;
 
-export type TranscribeAudioToPrayerPointsOutput = GeneratePrayerPointsFromTextOutput;
+
+const PrayerPointSchema = z.object({
+    point: z.string().describe('A suggested prayer point.'),
+    bibleVerse: z.string().describe('A relevant Bible verse suggestion.'),
+});
+
+const TranscribeAudioToPrayerPointsOutputSchema = z.object({
+  summary: z.string().describe("A concise summary of the audio's content."),
+  notes: z.string().describe("The full transcription of the audio."),
+  prayerPoints: z.array(PrayerPointSchema).describe('A list of suggested prayer points and Bible verses.'),
+});
+export type TranscribeAudioToPrayerPointsOutput = z.infer<typeof TranscribeAudioToPrayerPointsOutputSchema>;
 
 export async function transcribeAudioToPrayerPoints(input: TranscribeAudioToPrayerPointsInput): Promise<TranscribeAudioToPrayerPointsOutput> {
   return transcribeAudioToPrayerPointsFlow(input);
 }
 
+const prompt = ai.definePrompt({
+    name: 'summarizeAndExtractPrayersFromAudioPrompt',
+    input: { schema: z.object({ audioDataUri: z.string() }) },
+    output: { schema: TranscribeAudioToPrayerPointsOutputSchema },
+    prompt: `You are an expert spiritual assistant. Listen to the following audio recording and perform these tasks:
+1.  Transcribe the entire audio content verbatim. This will be the 'notes'.
+2.  Write a concise, one-paragraph summary of the main themes and topics discussed. This will be the 'summary'.
+3.  Based on the content, generate a list of actionable prayer points with relevant Bible verses.
+
+Format your response as a single JSON object.
+
+Audio: {{media url=audioDataUri}}
+`
+});
+
+
 const transcribeAudioToPrayerPointsFlow = ai.defineFlow(
   {
     name: 'transcribeAudioToPrayerPointsFlow',
     inputSchema: TranscribeAudioToPrayerPointsInputSchema,
-    outputSchema: z.custom<GeneratePrayerPointsFromTextOutput>(),
+    outputSchema: TranscribeAudioToPrayerPointsOutputSchema,
   },
   async input => {
-    const {output} = await ai.generate({
-      prompt: `Transcribe the following audio recording to text:`,
-      input: [{media: {url: input.audioDataUri}}]
-    });
     
-    const transcribedText = output?.text || "";
-
-    if (!transcribedText) {
-        return { notes: "", prayerPoints: [] };
+    if (!input.audioDataUri) {
+        return { summary: "", notes: "", prayerPoints: [] };
     }
     
-    return await generatePrayerPointsFromText({ text: transcribedText });
+    const {output} = await prompt(input);
+    return output!;
   }
 );

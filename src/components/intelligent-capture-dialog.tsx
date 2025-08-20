@@ -36,6 +36,7 @@ type CaptureResult = {
   sourceType: 'text' | 'image' | 'audio' | 'live' | 'document';
   sourceData?: string;
   notes: string;
+  summary?: string; // Add summary field
   prayerPoints: PrayerPoint[];
 };
 
@@ -149,6 +150,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                             title: captureTitle,
                             sourceType: 'audio',
                             sourceData: dataUri,
+                            summary: response.summary,
                             notes: response.notes,
                             prayerPoints: response.prayerPoints,
                         });
@@ -217,13 +219,14 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
           const dataUri = reader.result as string;
           setIsLoading(true);
           setResult(null);
-          setLoadingMessage('Transcribing audio...');
+          setLoadingMessage('Transcribing & Summarizing...');
           try {
             const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
             setResult({
               title: captureTitle,
               sourceType: 'live',
               sourceData: dataUri,
+              summary: response.summary,
               notes: response.notes,
               prayerPoints: response.prayerPoints
             });
@@ -285,16 +288,15 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
       
       addPrayers(prayersToSaveWithCategories);
       
-      // We assume the first selected category for the journal entry itself. This could be improved.
-      const journalCategoryId = prayersToSaveWithCategories.length > 0 ? prayersToSaveWithCategories[0].categoryId : categories[0]?.id;
+      // The journal entry notes will be the summary if available, otherwise the full notes.
+      const journalNotes = result.summary || result.notes;
 
       addJournalEntry({ 
           title: captureTitle,
-          notes: result.notes,
+          notes: journalNotes,
           sourceType: result.sourceType,
           sourceData: result.sourceData,
           prayerPoints: result.prayerPoints.filter((_, index) => selectedPoints.includes(index)),
-          categoryId: journalCategoryId,
       });
       
       toast({
@@ -342,26 +344,22 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
             categories: availableCategories,
         });
 
-        let finalCategoryId = suggestion.existingCategoryId;
+        let finalCategoryId: string | undefined = suggestion.existingCategoryId;
 
         if (suggestion.newCategoryName) {
             toast({ title: "New Category Suggested", description: `Creating and selecting "${suggestion.newCategoryName}"`});
             const newCategory = await addCategory({ name: suggestion.newCategoryName });
-            // The addCategory in the store needs to return the new category object or at least its ID.
-            // Assuming it returns the ID, we can update the state.
-            // This part requires a modification in the usePrayerStore's addCategory function.
-            // For now, let's assume it works and we get an ID.
-            // A realistic implementation would require the store to return the created category's ID.
-            // Let's assume the ID is the name lowercased and dashed.
-            finalCategoryId = suggestion.newCategoryName.toLowerCase().replace(/\s+/g, '-');
+            finalCategoryId = newCategory.id;
         }
         
         if (finalCategoryId) {
             const newPointCategories = result.prayerPoints.reduce((acc, _, index) => {
-                acc[index] = finalCategoryId!;
+                if (selectedPoints.includes(index)) { // Only set for selected points
+                    acc[index] = finalCategoryId!;
+                }
                 return acc;
             }, {} as Record<number, string>);
-            setPointCategories(newPointCategories);
+            setPointCategories(prev => ({ ...prev, ...newPointCategories }));
         }
     } catch (error) {
         console.error("Failed to auto-categorize:", error);
@@ -421,6 +419,13 @@ useEffect(() => {
                 <Label htmlFor="capture-title">Title</Label>
                 <Input id="capture-title" value={captureTitle} onChange={(e) => setCaptureTitle(e.target.value)} />
             </div>
+
+            {result.summary && (
+              <div>
+                  <h3 className="font-semibold mb-2">Summary</h3>
+                  <p className="text-sm text-muted-foreground p-3 bg-secondary/50 rounded-md border">{result.summary}</p>
+              </div>
+            )}
             
             <div>
               <h3 className="font-semibold mb-2">Prayer Points</h3>
@@ -438,7 +443,7 @@ useEffect(() => {
                             className="mt-1"
                           />
                           <div className="grid gap-1.5 leading-none flex-1">
-                            <label htmlFor={`pp-${index}`} className="text-sm font-medium leading-none">
+                            <label htmlFor={`pp-${index}`} className={cn("text-sm font-medium leading-none")}>
                               {p.point}
                             </label>
                             {p.bibleVerse && <p className="text-xs text-muted-foreground">{p.bibleVerse}</p>}
