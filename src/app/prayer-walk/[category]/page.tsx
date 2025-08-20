@@ -7,7 +7,7 @@ import { Prayer } from '@/lib/types';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Loader2, ArrowLeft, Footprints, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, ArrowLeft, Footprints, Check, Pause, Play } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useJournalStore } from '@/hooks/use-journal-store';
@@ -40,6 +40,7 @@ export default function PrayerWalkPage() {
   const [count, setCount] = React.useState(0)
 
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
     if (!api) {
@@ -68,17 +69,17 @@ export default function PrayerWalkPage() {
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
-    if (startTime && !isSessionEnded) {
+    if (startTime && !isSessionEnded && !isPaused) {
       timer = setInterval(() => {
         setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [startTime, isSessionEnded]);
+  }, [startTime, isSessionEnded, isPaused]);
 
   useEffect(() => {
     let countdownTimer: NodeJS.Timeout;
-    if (countdown !== null && countdown > 0 && !isSessionEnded) {
+    if (countdown !== null && countdown > 0 && !isSessionEnded && !isPaused) {
       countdownTimer = setInterval(() => {
         setCountdown(prev => (prev ? prev - 1 : null));
       }, 1000);
@@ -90,7 +91,7 @@ export default function PrayerWalkPage() {
       }
     }
     return () => clearInterval(countdownTimer);
-  }, [countdown, isSessionEnded, api, current, count]);
+  }, [countdown, isSessionEnded, api, current, count, isPaused]);
 
 
   React.useEffect(() => {
@@ -285,11 +286,19 @@ export default function PrayerWalkPage() {
                         />
                     ))}
                 </div>
-                 <div className="grid grid-cols-2 w-full max-w-xs gap-4">
-                     <Button variant="outline" onClick={() => api?.scrollPrev()} disabled={current === 1}>
+                 <div className="grid grid-cols-3 w-full max-w-xs gap-4 items-center">
+                     <Button variant="outline" className="justify-self-start" onClick={() => api?.scrollPrev()} disabled={current === 1}>
                         <ChevronLeft className="h-4 w-4 mr-1" /> Prev
                     </Button>
-                    <Button onClick={() => api?.scrollNext()} disabled={current === count}>
+                    <Button 
+                        variant="secondary" 
+                        size="icon" 
+                        className="h-14 w-14 rounded-full justify-self-center"
+                        onClick={() => setIsPaused(!isPaused)}
+                    >
+                        {isPaused ? <Play className="h-6 w-6" /> : <Pause className="h-6 w-6" />}
+                    </Button>
+                    <Button onClick={() => api?.scrollNext()} className="justify-self-end" disabled={current === count}>
                         Next <ChevronRight className="h-4 w-4 ml-1" />
                     </Button>
                  </div>
@@ -299,3 +308,5 @@ export default function PrayerWalkPage() {
     </div>
   );
 }
+
+    
