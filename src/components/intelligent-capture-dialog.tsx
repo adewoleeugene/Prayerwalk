@@ -10,7 +10,7 @@ import { transcribeAudioToPrayerPoints } from '@/ai/flows/transcribe-audio-to-pr
 import { useToast } from '@/hooks/use-toast';
 import { useJournalStore } from '@/hooks/use-journal-store';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
-import { Loader2, Mic, Upload, Square, NotebookText, Save, FileText, Image as ImageIcon, Music, Check } from 'lucide-react';
+import { Loader2, Mic, Upload, Square, NotebookText, Save, FileText, Image as ImageIcon, Music, Check, Pause, Play } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { generatePrayerPointsFromText } from '@/ai/flows/generate-prayer-points-from-text';
 import { Textarea } from './ui/textarea';
@@ -61,6 +61,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   
   // Live recording state
   const [isRecording, setIsRecording] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
@@ -242,6 +243,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
       
       mediaRecorderRef.current.start();
       setIsRecording(true);
+      setIsPaused(false);
     } catch (err) {
       console.error("Error accessing microphone:", err);
       toast({
@@ -253,14 +255,39 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   };
 
   const handleStopRecording = () => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
         mediaRecorderRef.current.stop();
     }
     setIsRecording(false);
+    setIsPaused(false);
   };
   
+  const handlePauseRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      mediaRecorderRef.current.pause();
+      setIsPaused(true);
+    }
+  };
+
+  const handleResumeRecording = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'paused') {
+      mediaRecorderRef.current.resume();
+      setIsPaused(false);
+    }
+  };
+
+
   const handleSaveEntry = async () => {
-    if (!result || selectedPoints.length === 0) return;
+    if (!result) return;
+    if (selectedPoints.length === 0) {
+        toast({
+            variant: "destructive",
+            title: "No Prayer Points Selected",
+            description: "Please select at least one prayer point to save.",
+        });
+        return;
+    }
+
     setIsLoading(true);
     setLoadingMessage('Saving entry and prayers...');
 
@@ -523,18 +550,46 @@ useEffect(() => {
     if (currentTab === 'live') {
         return (
             <div className="text-center space-y-4 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center h-[350px]">
-                <p className="text-lg font-medium">{isRecording ? "Recording in progress..." : "Start recording to capture live audio"}</p>
-                <Button 
-                    onClick={isRecording ? handleStopRecording : handleStartRecording} 
-                    variant={isRecording ? "destructive" : "default"}
-                    className="w-24 h-24 rounded-full"
-                    size="icon"
-                >
-                    {isRecording ? <Square className="h-10 w-10" /> : <Mic className="h-10 w-10" />}
-                </Button>
-                 <p className="text-sm text-muted-foreground">
-                    {isRecording ? "Click the square to stop." : "We'll process the audio when you stop."}
-                </p>
+                {!isRecording && (
+                    <>
+                        <p className="text-lg font-medium">Start recording to capture live audio</p>
+                        <Button 
+                            onClick={handleStartRecording} 
+                            className="w-24 h-24 rounded-full"
+                            size="icon"
+                        >
+                            <Mic className="h-10 w-10" />
+                        </Button>
+                         <p className="text-sm text-muted-foreground">
+                            We'll process the audio when you stop.
+                        </p>
+                    </>
+                )}
+                {isRecording && (
+                    <div className="flex flex-col items-center gap-4">
+                        <p className="text-lg font-medium">
+                            {isPaused ? "Recording Paused" : "Recording in progress..."}
+                        </p>
+                        <div className="flex items-center gap-4">
+                            <Button 
+                                onClick={isPaused ? handleResumeRecording : handlePauseRecording}
+                                variant="secondary"
+                                size="lg"
+                            >
+                                {isPaused ? <Play className="mr-2" /> : <Pause className="mr-2" />}
+                                {isPaused ? "Resume" : "Pause"}
+                            </Button>
+                            <Button
+                                onClick={handleStopRecording}
+                                variant="destructive"
+                                size="lg"
+                            >
+                                <Square className="mr-2" />
+                                Stop
+                            </Button>
+                        </div>
+                    </div>
+                )}
             </div>
         )
     }
