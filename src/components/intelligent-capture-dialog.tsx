@@ -10,7 +10,7 @@ import { transcribeAudioToPrayerPoints } from '@/ai/flows/transcribe-audio-to-pr
 import { useToast } from '@/hooks/use-toast';
 import { useJournalStore } from '@/hooks/use-journal-store';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
-import { Loader2, Mic, Upload, Square, NotebookText, Save, FileText } from 'lucide-react';
+import { Loader2, Mic, Upload, Square, NotebookText, Save, FileText, Image as ImageIcon, Music } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { generatePrayerPointsFromText } from '@/ai/flows/generate-prayer-points-from-text';
 import { Textarea } from './ui/textarea';
@@ -20,6 +20,7 @@ import { Checkbox } from './ui/checkbox';
 import { suggestCategory } from '@/ai/flows/suggest-category-flow';
 import { analyzeSermonDocument } from '@/ai/flows/analyze-sermon-document';
 import mammoth from 'mammoth';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 
 type IntelligentCaptureDialogProps = {
@@ -53,6 +54,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   const [textInput, setTextInput] = useState("");
   const [captureTitle, setCaptureTitle] = useState("");
   const [selectedPoints, setSelectedPoints] = useState<number[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   
   // Live recording state
   const [isRecording, setIsRecording] = useState(false);
@@ -72,6 +74,29 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+  
+  useEffect(() => {
+    // When results are generated, suggest a category
+    if (result && result.prayerPoints.length > 0 && categories.length > 0) {
+        const suggest = async () => {
+            const prayerPointsText = result.prayerPoints.map(p => p.point);
+            const availableCategories = categories.map(c => ({ id: c.id, name: c.name }));
+            try {
+                const suggestion = await suggestCategory({
+                    prayerPoints: prayerPointsText,
+                    categories: availableCategories,
+                });
+                setSelectedCategoryId(suggestion.categoryId);
+            } catch (error) {
+                console.error("Failed to suggest category, falling back to default.", error);
+                setSelectedCategoryId(categories[0].id);
+            }
+        };
+        suggest();
+    } else if (result && categories.length > 0) {
+        setSelectedCategoryId(categories[0].id);
+    }
+  }, [result, categories]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'audio' | 'document') => {
     const file = e.target.files?.[0];
@@ -259,28 +284,21 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   };
   
   const handleSaveEntry = async () => {
-    if (!result) return;
+    if (!result || !selectedCategoryId) {
+        toast({ variant: 'destructive', title: 'Cannot Save', description: 'No category selected or no results to save.' });
+        return;
+    }
     setIsLoading(true);
     setLoadingMessage('Saving entry...');
 
     try {
       const savedPrayerPoints = selectedPoints.map(index => result.prayerPoints[index]);
       
-      let categoryId = categories[0]?.id || 'personal'; // Default category
       if (savedPrayerPoints.length > 0) {
-        const selectedPrayerPointsText = savedPrayerPoints.map(p => p.point);
-        const availableCategories = categories.map(c => ({ id: c.id, name: c.name }));
-        
-        const suggestion = await suggestCategory({
-            prayerPoints: selectedPrayerPointsText,
-            categories: availableCategories,
-        });
-        categoryId = suggestion.categoryId;
-
         const prayersToAdd = savedPrayerPoints.map(pp => ({
           title: pp.point,
           bibleVerse: pp.bibleVerse,
-          categoryId: categoryId,
+          categoryId: selectedCategoryId,
           notes: result.sourceType === 'text' ? editableNotes : undefined,
         }));
         
@@ -293,10 +311,10 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
           sourceType: result.sourceType,
           sourceData: result.sourceData,
           prayerPoints: savedPrayerPoints,
-          categoryId: categoryId,
+          categoryId: selectedCategoryId,
       });
       
-      const categoryName = categories.find(c => c.id === categoryId)?.name || 'a category';
+      const categoryName = categories.find(c => c.id === selectedCategoryId)?.name || 'a category';
       toast({
         title: "Entry Saved!",
         description: `Journal entry and ${savedPrayerPoints.length} prayer point(s) added to ${categoryName}.`,
@@ -333,6 +351,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     setCaptureTitle("");
     setSelectedPoints([]);
     setEditableNotes('');
+    setSelectedCategoryId(null);
   }
   
   const handleDialogClose = (isOpen: boolean) => {
@@ -366,15 +385,6 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                 <Input id="capture-title" value={captureTitle} onChange={(e) => setCaptureTitle(e.target.value)} />
             </div>
             <div>
-              <h3 className="font-semibold mb-2">Notes (Editable)</h3>
-              <Textarea 
-                value={editableNotes}
-                onChange={(e) => setEditableNotes(e.target.value)}
-                rows={5}
-                className="text-sm"
-              />
-            </div>
-            <div>
               <h3 className="font-semibold mb-2">Prayer Points (select to save)</h3>
               <ScrollArea className="h-32">
                 <div className="space-y-2 p-1">
@@ -401,8 +411,23 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                 </div>
               </ScrollArea>
             </div>
+             <div className="space-y-2">
+                <Label htmlFor="category-select">Save to Category</Label>
+                 <Select
+                    value={selectedCategoryId || ''}
+                    onValueChange={setSelectedCategoryId}
+                    disabled={!selectedCategoryId}
+                 >
+                    <SelectTrigger id="category-select">
+                        <SelectValue placeholder={!selectedCategoryId ? "Suggesting category..." : "Select a category"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                    </SelectContent>
+                 </Select>
+            </div>
             <div className="grid grid-cols-1 gap-2">
-               <Button onClick={handleSaveEntry}>
+               <Button onClick={handleSaveEntry} disabled={!selectedCategoryId}>
                 <Save className="mr-2 h-4 w-4"/> Save Entry
               </Button>
             </div>
@@ -439,7 +464,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
         return (
             <div className="text-center space-y-4 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center h-[350px]">
                 <p>Upload a sermon or meeting recording.</p>
-                <Button onClick={() => audioInputRef.current?.click()}><Mic className="mr-2 h-4 w-4"/> Upload Audio</Button>
+                <Button onClick={() => audioInputRef.current?.click()}><Upload className="mr-2 h-4 w-4"/> Upload Audio</Button>
                 <input type="file" accept="audio/*" ref={audioInputRef} className="hidden" onChange={(e) => handleFileChange(e, 'audio')} />
             </div>
         )
@@ -486,15 +511,30 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
           <DialogDescription>Save a new journal entry from text, an image, audio file, or live recording.</DialogDescription>
         </DialogHeader>
         <Tabs defaultValue="text" className="w-full" onValueChange={handleTabChange} value={currentTab}>
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="text"><NotebookText className="h-4 w-4 mr-1"/>Text</TabsTrigger>
-            <TabsTrigger value="image">Image</TabsTrigger>
-            <TabsTrigger value="audio">Audio</TabsTrigger>
-            <TabsTrigger value="file"><FileText className="h-4 w-4 mr-1"/>File</TabsTrigger>
-            <TabsTrigger value="live">Live</TabsTrigger>
+           <TabsList className="grid w-full grid-cols-5">
+              <TabsTrigger value="text" className="flex items-center gap-1">
+                <NotebookText className="h-4 w-4" />
+                <span>Text</span>
+              </TabsTrigger>
+              <TabsTrigger value="image" className="flex items-center gap-1">
+                <ImageIcon className="h-4 w-4" />
+                <span>Image</span>
+              </TabsTrigger>
+              <TabsTrigger value="audio" className="flex items-center gap-1">
+                <Music className="h-4 w-4" />
+                <span>Audio</span>
+              </TabsTrigger>
+              <TabsTrigger value="file" className="flex items-center gap-1">
+                <FileText className="h-4 w-4" />
+                <span>File</span>
+              </TabsTrigger>
+              <TabsTrigger value="live" className="flex items-center gap-1">
+                <Mic className="h-4 w-4" />
+                <span>Live</span>
+              </TabsTrigger>
           </TabsList>
           
-          <div className="mt-4 min-h-[380px]">
+          <div className="mt-4 min-h-[420px]">
             {renderContent()}
           </div>
 
@@ -504,3 +544,4 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     </>
   );
 }
+
