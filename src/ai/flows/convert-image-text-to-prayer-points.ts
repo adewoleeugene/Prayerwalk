@@ -56,7 +56,15 @@ const convertImageTextToPrayerPointsFlow = ai.defineFlow(
     outputSchema: ConvertImageTextToPrayerPointsOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    try {
+      const {output} = await prompt(input);
+      return output!;
+    } catch (error: any) {
+      if (error.message && error.message.includes('429 Too Many Requests')) {
+          throw new Error('You have exceeded the daily limit for AI requests. Please try again tomorrow.');
+      }
+      console.error("Error in convertImageTextToPrayerPointsFlow: ", error);
+      throw new Error('An unexpected error occurred while processing the image.');
+    }
   }
 );
