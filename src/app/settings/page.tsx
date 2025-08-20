@@ -42,6 +42,7 @@ export function SettingsPage({ setView }: { setView: (view: View) => void; }) {
                   <LogOut className="h-4 w-4" />
                   <span>Sign Out</span>
                 </div>
+                <ChevronRight className="h-4 w-4" />
             </Button>
           </CardContent>
         </Card>
