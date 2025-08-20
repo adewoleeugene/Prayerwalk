@@ -173,7 +173,7 @@ export const usePrayerStore = () => {
     }));
   };
 
-  const addCategory = async (category: Omit<Category, 'id' | 'icon'>) => {
+  const addCategory = async (category: Omit<Category, 'id' | 'icon'>): Promise<Category> => {
     const categoryId = category.name.toLowerCase().replace(/\s+/g, '-');
     const currentCategories = categoriesStore.get();
     
@@ -197,6 +197,7 @@ export const usePrayerStore = () => {
     };
     
     categoriesStore.set(prev => [...prev, newCategory]);
+    return newCategory;
   };
   
   const updateCategory = async (categoryId: string, updatedData: Partial<Omit<Category, 'id'>>) => {

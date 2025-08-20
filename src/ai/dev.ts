@@ -10,3 +10,4 @@ import '@/ai/flows/suggest-category-flow.ts';
 import '@/ai/flows/suggest-alternative-category-flow.ts';
 import '@/ai/flows/analyze-prayer-activity.ts';
 import '@/ai/flows/analyze-sermon-document.ts';
+import '@/ai/flows/propose-category-flow.ts';

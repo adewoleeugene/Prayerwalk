@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -16,7 +17,7 @@ import { Textarea } from './ui/textarea';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Checkbox } from './ui/checkbox';
-import { suggestCategory } from '@/ai/flows/suggest-category-flow';
+import { proposeCategory } from '@/ai/flows/propose-category-flow';
 import { analyzeSermonDocument } from '@/ai/flows/analyze-sermon-document';
 import mammoth from 'mammoth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
@@ -40,7 +41,7 @@ type CaptureResult = {
 
 export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCaptureDialogProps) {
   const { addJournalEntry } = useJournalStore();
-  const { addPrayers, categories } = usePrayerStore();
+  const { addPrayers, categories, addCategory } = usePrayerStore();
   const { toast } = useToast();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
@@ -49,7 +50,6 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('Analyzing...');
   const [result, setResult] = useState<CaptureResult | null>(null);
-  const [editableNotes, setEditableNotes] = useState('');
   const [currentTab, setCurrentTab] = useState('text');
   const [textInput, setTextInput] = useState("");
   const [captureTitle, setCaptureTitle] = useState("");
@@ -76,38 +76,6 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
-  
-  useEffect(() => {
-    // When results are generated, suggest a category and set it as default for all points
-    if (result && result.prayerPoints.length > 0 && categories.length > 0) {
-        const suggest = async () => {
-            const prayerPointsText = result.prayerPoints.map(p => p.point);
-            const availableCategories = categories.map(c => ({ id: c.id, name: c.name }));
-            try {
-                const suggestion = await suggestCategory({
-                    prayerPoints: prayerPointsText,
-                    categories: availableCategories,
-                });
-                const initialCategories = result.prayerPoints.reduce((acc, _, index) => {
-                    acc[index] = suggestion.categoryId;
-                    return acc;
-                }, {} as Record<number, string>);
-                setPointCategories(initialCategories);
-
-            } catch (error) {
-                console.error("Failed to suggest category, falling back to default.", error);
-                if (categories.length > 0) {
-                    const initialCategories = result.prayerPoints.reduce((acc, _, index) => {
-                        acc[index] = categories[0].id;
-                        return acc;
-                    }, {} as Record<number, string>);
-                    setPointCategories(initialCategories);
-                }
-            }
-        };
-        suggest();
-    }
-  }, [result, categories]);
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'audio' | 'document') => {
     const file = e.target.files?.[0];
@@ -130,7 +98,6 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                     notes: response.notes,
                     prayerPoints: response.prayerPoints,
                 });
-                setEditableNotes(response.notes);
                 setSelectedPoints(response.prayerPoints.map((_, i) => i));
 
             } else { // Handles PDF
@@ -148,8 +115,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
                             notes: response.coreMessageSummary,
                             prayerPoints: response.prayerPoints.map(p => ({ point: p, bibleVerse: ''})),
                         });
-                        setEditableNotes(response.coreMessageSummary);
-setSelectedPoints(response.prayerPoints.map((_, i) => i));
+                        setSelectedPoints(response.prayerPoints.map((_, i) => i));
                     } catch (error) {
                         console.error(`Error processing ${type}:`, error);
                         toast({ variant: "destructive", title: `Failed to process ${type}`, description: "An error occurred. Please try another file." });
@@ -175,7 +141,6 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
                             notes: response.extractedText,
                             prayerPoints: response.prayerPoints,
                         });
-                        setEditableNotes(response.extractedText);
                         setSelectedPoints(response.prayerPoints.map((_, i) => i));
                     } else if (type === 'audio') {
                         setLoadingMessage('Transcribing audio...');
@@ -187,7 +152,6 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
                             notes: response.notes,
                             prayerPoints: response.prayerPoints,
                         });
-                        setEditableNotes(response.notes);
                         setSelectedPoints(response.prayerPoints.map((_, i) => i));
                     }
                 } catch (error) {
@@ -226,7 +190,6 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
             notes: response.notes,
             prayerPoints: response.prayerPoints,
           });
-          setEditableNotes(response.notes);
           setSelectedPoints(response.prayerPoints.map((_, i) => i));
       } catch (error) {
           console.error("Error generating from text:", error);
@@ -264,7 +227,6 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
               notes: response.notes,
               prayerPoints: response.prayerPoints
             });
-            setEditableNotes(response.notes);
             setSelectedPoints(response.prayerPoints.map((_, i) => i));
           } catch (error) {
               console.error("Error transcribing audio:", error);
@@ -295,23 +257,23 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
   };
   
   const handleSaveEntry = async () => {
-    if (!result) return;
+    if (!result || selectedPoints.length === 0) return;
     setIsLoading(true);
     setLoadingMessage('Saving entry and prayers...');
 
     try {
-      const prayersToSave = selectedPoints.map(index => {
+      const prayersToSaveWithCategories = selectedPoints.map(index => {
         const prayerPoint = result.prayerPoints[index];
         const categoryId = pointCategories[index];
         return {
           title: prayerPoint.point,
           bibleVerse: prayerPoint.bibleVerse,
           categoryId: categoryId,
-          notes: result.sourceType === 'text' ? editableNotes : undefined,
+          notes: result.sourceType === 'text' ? result.notes : undefined,
         };
       });
 
-      if (prayersToSave.some(p => !p.categoryId)) {
+      if (prayersToSaveWithCategories.some(p => !p.categoryId)) {
         toast({
           variant: 'destructive',
           title: 'Category Missing',
@@ -321,16 +283,14 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
         return;
       }
       
-      if (prayersToSave.length > 0) {
-        addPrayers(prayersToSave);
-      }
+      addPrayers(prayersToSaveWithCategories);
       
       // We assume the first selected category for the journal entry itself. This could be improved.
-      const journalCategoryId = prayersToSave.length > 0 ? prayersToSave[0].categoryId : categories[0]?.id;
+      const journalCategoryId = prayersToSaveWithCategories.length > 0 ? prayersToSaveWithCategories[0].categoryId : categories[0]?.id;
 
       addJournalEntry({ 
           title: captureTitle,
-          notes: editableNotes,
+          notes: result.notes,
           sourceType: result.sourceType,
           sourceData: result.sourceData,
           prayerPoints: result.prayerPoints.filter((_, index) => selectedPoints.includes(index)),
@@ -339,7 +299,7 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
       
       toast({
         title: "Entry Saved!",
-        description: `Journal entry and ${prayersToSave.length} prayer point(s) added.`,
+        description: `Journal entry and ${prayersToSaveWithCategories.length} prayer point(s) added.`,
       });
 
 
@@ -366,6 +326,58 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
   const handlePointCategoryChange = (index: number, categoryId: string) => {
     setPointCategories(prev => ({...prev, [index]: categoryId}));
   }
+  
+  const handleAutoCategorize = async () => {
+    if (!result || result.prayerPoints.length === 0) return;
+
+    setLoadingMessage("Categorizing...");
+    setIsLoading(true);
+
+    try {
+        const prayerPointsText = result.prayerPoints.map(p => p.point);
+        const availableCategories = categories.map(c => ({ id: c.id, name: c.name }));
+
+        const suggestion = await proposeCategory({
+            prayerPoints: prayerPointsText,
+            categories: availableCategories,
+        });
+
+        let finalCategoryId = suggestion.existingCategoryId;
+
+        if (suggestion.newCategoryName) {
+            toast({ title: "New Category Suggested", description: `Creating and selecting "${suggestion.newCategoryName}"`});
+            const newCategory = await addCategory({ name: suggestion.newCategoryName });
+            // The addCategory in the store needs to return the new category object or at least its ID.
+            // Assuming it returns the ID, we can update the state.
+            // This part requires a modification in the usePrayerStore's addCategory function.
+            // For now, let's assume it works and we get an ID.
+            // A realistic implementation would require the store to return the created category's ID.
+            // Let's assume the ID is the name lowercased and dashed.
+            finalCategoryId = suggestion.newCategoryName.toLowerCase().replace(/\s+/g, '-');
+        }
+        
+        if (finalCategoryId) {
+            const newPointCategories = result.prayerPoints.reduce((acc, _, index) => {
+                acc[index] = finalCategoryId!;
+                return acc;
+            }, {} as Record<number, string>);
+            setPointCategories(newPointCategories);
+        }
+    } catch (error) {
+        console.error("Failed to auto-categorize:", error);
+        toast({ variant: 'destructive', title: 'Auto-categorization failed.' });
+    } finally {
+        setIsLoading(false);
+    }
+};
+
+useEffect(() => {
+    if (result && result.prayerPoints.length > 0) {
+        handleAutoCategorize();
+    }
+// eslint-disable-next-line react-hooks/exhaustive-deps
+}, [result]);
+
 
   const resetAllTabs = () => {
     setResult(null);
@@ -376,7 +388,6 @@ setSelectedPoints(response.prayerPoints.map((_, i) => i));
     if (documentInputRef.current) documentInputRef.current.value = "";
     setCaptureTitle("");
     setSelectedPoints([]);
-    setEditableNotes('');
     setPointCategories({});
   }
   

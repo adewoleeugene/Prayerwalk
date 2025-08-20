@@ -1,4 +1,6 @@
 
+import { z } from 'zod';
+
 export interface Prayer {
   id: string;
   title: string;
@@ -16,7 +18,7 @@ export interface Category {
 }
 
 export interface JournalEntry {
-  id: string;
+  id:string;
   title: string;
   createdAt: string;
   sourceType: 'text' | 'image' | 'audio' | 'live' | 'document';
@@ -30,3 +32,16 @@ export interface JournalEntry {
 export interface Goal {
     dailyPrayerTime: number; // in minutes
 }
+
+// Schemas for propose-category-flow
+export const ProposeCategoryInputSchema = z.object({
+  prayerPoints: z.array(z.string()).describe('A list of prayer points.'),
+  categories: z.array(z.object({id: z.string(), name: z.string()})).describe('A list of available categories.'),
+});
+export type ProposeCategoryInput = z.infer<typeof ProposeCategoryInputSchema>;
+
+export const ProposeCategoryOutputSchema = z.object({
+  existingCategoryId: z.string().optional().describe('The ID of an existing category if a good match is found.'),
+  newCategoryName: z.string().optional().describe('The name for a new category if no existing one is suitable.'),
+});
+export type ProposeCategoryOutput = z.infer<typeof ProposeCategoryOutputSchema>;
