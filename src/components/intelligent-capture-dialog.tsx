@@ -10,7 +10,7 @@ import { transcribeAudioToPrayerPoints } from '@/ai/flows/transcribe-audio-to-pr
 import { useToast } from '@/hooks/use-toast';
 import { useJournalStore } from '@/hooks/use-journal-store';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
-import { Loader2, Mic, Upload, Square, NotebookText, Save, FileText, Image as ImageIcon, Music, Check, Pause, Play } from 'lucide-react';
+import { Loader2, Mic, Upload, Square, NotebookText, Save, FileText, Image as ImageIcon, Music, Check, Pause, Play, ShieldAlert } from 'lucide-react';
 import { ScrollArea } from './ui/scroll-area';
 import { generatePrayerPointsFromText } from '@/ai/flows/generate-prayer-points-from-text';
 import { Textarea } from './ui/textarea';
@@ -23,6 +23,8 @@ import mammoth from 'mammoth';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { cn } from '@/lib/utils';
 import { extractTextFromDocument } from '@/ai/flows/extract-text-from-document';
+import { useUsageTracker } from '@/hooks/use-usage-tracker';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 
 type IntelligentCaptureDialogProps = {
@@ -45,6 +47,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   const { addJournalEntry } = useJournalStore();
   const { addPrayers, categories, addCategory } = usePrayerStore();
   const { toast } = useToast();
+  const { dailyCount, limit, hasReachedLimit, recordUsage, isLoaded: isUsageLoaded } = useUsageTracker();
   const imageInputRef = useRef<HTMLInputElement>(null);
   const audioInputRef = useRef<HTMLInputElement>(null);
   const documentInputRef = useRef<HTMLInputElement>(null);
@@ -79,13 +82,27 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+  
+  const checkLimit = () => {
+    if (hasReachedLimit) {
+      toast({
+        variant: "destructive",
+        title: "Daily Limit Reached",
+        description: `You have used all of your ${limit} daily AI interactions. Please try again tomorrow.`,
+      });
+      return true;
+    }
+    return false;
+  }
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: 'image' | 'audio' | 'document') => {
+    if (checkLimit()) return;
     const file = e.target.files?.[0];
     if (!file) return;
 
     setIsLoading(true);
     setResult(null);
+    recordUsage();
     
     try {
         if (type === 'document') {
@@ -177,18 +194,19 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
             }
             return; // Prevent outer finally from running early
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.message && error.message.includes('daily limit')) {
+          toast({ variant: "destructive", title: "Daily Limit Reached", description: "You have exceeded the daily AI request limit. Please try again tomorrow." });
+      } else {
+          toast({ variant: "destructive", title: `Failed to process ${type}`, description: "An error occurred. Please try another file." });
+      }
       console.error(`Error processing ${type}:`, error);
-      toast({
-        variant: "destructive",
-        title: `Failed to process ${type}`,
-        description: "An error occurred. Please try another file.",
-      });
     }
     setIsLoading(false);
   };
 
   const handleGenerateFromText = async () => {
+      if (checkLimit()) return;
       if (!textInput.trim()) {
           toast({ variant: 'destructive', title: 'Text is empty', description: 'Please enter some text to generate prayer points.' });
           return;
@@ -196,6 +214,8 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
       setIsLoading(true);
       setResult(null);
       setLoadingMessage('Generating prayer points...');
+      recordUsage();
+
       try {
           const response = await generatePrayerPointsFromText({ text: textInput });
           setResult({
@@ -214,6 +234,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   }
 
   const handleStartRecording = async () => {
+    if (checkLimit()) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunksRef.current = [];
@@ -232,6 +253,7 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
           setIsLoading(true);
           setResult(null);
           setLoadingMessage('Transcribing & Summarizing...');
+          recordUsage();
           try {
             const response = await transcribeAudioToPrayerPoints({ audioDataUri: dataUri });
             setResult({
@@ -368,10 +390,11 @@ export function IntelligentCaptureDialog({ open, onOpenChange }: IntelligentCapt
   }
   
   const handleAutoCategorize = async () => {
-    if (!result || result.prayerPoints.length === 0) return;
+    if (!result || result.prayerPoints.length === 0 || checkLimit()) return;
 
     setLoadingMessage("Categorizing...");
     setIsLoading(true);
+    recordUsage();
 
     try {
         const prayerPointsText = result.prayerPoints.map(p => p.point);
@@ -449,6 +472,16 @@ useEffect(() => {
         </div>
       );
     }
+    
+    const UsageAlert = () => (
+      <Alert variant="destructive" className="mb-4">
+        <ShieldAlert className="h-4 w-4" />
+        <AlertTitle>Daily Limit Reached</AlertTitle>
+        <AlertDescription>
+          You've used {dailyCount}/{limit} AI interactions. Please try again tomorrow.
+        </AlertDescription>
+      </Alert>
+    );
 
     if (result) {
       return (
@@ -516,51 +549,47 @@ useEffect(() => {
     if (currentTab === 'text') {
         return (
             <div className="space-y-4">
+                {hasReachedLimit && <UsageAlert />}
                 <Textarea
                     id="text-input"
                     value={textInput}
                     onChange={(e) => setTextInput(e.target.value)}
                     rows={12}
                     placeholder="Type or paste your notes, thoughts, or a transcribed sermon here..."
+                    disabled={hasReachedLimit}
                 />
-                 <Button onClick={handleGenerateFromText} className="w-full">Generate Prayer Points</Button>
-            </div>
-        )
-    }
-
-    if (currentTab === 'image') {
-        return (
-            <div className="text-center space-y-4 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center h-[350px]">
-                <p>Upload an image of a slide or notes.</p>
-                <Button onClick={() => imageInputRef.current?.click()}><Upload className="mr-2 h-4 w-4"/> Upload Image</Button>
-                <input type="file" accept="image/*" ref={imageInputRef} className="hidden" onChange={(e) => handleFileChange(e, 'image')} />
-            </div>
-        );
-    }
-
-    if (currentTab === 'audio') {
-        return (
-            <div className="text-center space-y-4 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center h-[350px]">
-                <p>Upload a sermon or meeting recording.</p>
-                <Button onClick={() => audioInputRef.current?.click()}><Upload className="mr-2 h-4 w-4"/> Upload Audio</Button>
-                <input type="file" accept="audio/mp3, audio/mpeg, audio/wav, audio/aac, audio/ogg, audio/webm, audio/flac" ref={audioInputRef} className="hidden" onChange={(e) => handleFileChange(e, 'audio')} />
+                 <Button onClick={handleGenerateFromText} className="w-full" disabled={hasReachedLimit}>Generate Prayer Points</Button>
             </div>
         )
     }
     
-    if (currentTab === 'file') {
+    const FileUploadArea = ({ type }: { type: 'image' | 'audio' | 'document' }) => {
+        const descriptions = {
+            image: "Upload an image of a slide or notes.",
+            audio: "Upload a sermon or meeting recording.",
+            document: "Upload a document file (pdf, docx)."
+        };
+        const inputRef = type === 'image' ? imageInputRef : type === 'audio' ? audioInputRef : documentInputRef;
+        const acceptType = type === 'image' ? 'image/*' : type === 'audio' ? 'audio/*' : '.pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
         return (
-            <div className="text-center space-y-4 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center h-[350px]">
-                <p>Upload a document file (pdf, docx).</p>
-                <Button onClick={() => documentInputRef.current?.click()}><Upload className="mr-2 h-4 w-4"/> Upload File</Button>
-                <input type="file" accept=".pdf,.doc,.docx,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" ref={documentInputRef} className="hidden" onChange={(e) => handleFileChange(e, 'document')} />
+             <div className="text-center space-y-4 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center h-[350px]">
+                {hasReachedLimit && <UsageAlert />}
+                <p>{descriptions[type]}</p>
+                <Button onClick={() => inputRef.current?.click()} disabled={hasReachedLimit}><Upload className="mr-2 h-4 w-4"/> Upload {type.charAt(0).toUpperCase() + type.slice(1)}</Button>
+                <input type="file" accept={acceptType} ref={inputRef} className="hidden" onChange={(e) => handleFileChange(e, type)} />
             </div>
-        );
-    }
+        )
+    };
+
+    if (currentTab === 'image') return <FileUploadArea type="image" />;
+    if (currentTab === 'audio') return <FileUploadArea type="audio" />;
+    if (currentTab === 'file') return <FileUploadArea type="document" />;
 
     if (currentTab === 'live') {
         return (
             <div className="text-center space-y-4 p-4 border-2 border-dashed rounded-lg flex flex-col items-center justify-center h-[350px]">
+                {hasReachedLimit && <UsageAlert />}
                 {!isRecording && (
                     <>
                         <p className="text-lg font-medium">Start recording to capture live audio</p>
@@ -568,6 +597,7 @@ useEffect(() => {
                             onClick={handleStartRecording} 
                             className="w-24 h-24 rounded-full"
                             size="icon"
+                            disabled={hasReachedLimit}
                         >
                             <Mic className="h-10 w-10" />
                         </Button>
@@ -641,6 +671,7 @@ useEffect(() => {
           </TabsList>
           
           <div className="mt-4 min-h-[420px]">
+            {isUsageLoaded && <p className="text-xs text-muted-foreground text-center mb-2">Daily AI Usage: {dailyCount}/{limit}</p>}
             {renderContent()}
           </div>
 
