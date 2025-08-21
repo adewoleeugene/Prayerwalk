@@ -168,6 +168,14 @@ export default function PrayerWalkPage() {
       
       setSessionPrayers(filtered);
       setStartTime(Date.now());
+
+      // Unlock audio on session start
+      if (audioRef.current) {
+        audioRef.current.play().then(() => {
+          audioRef.current?.pause();
+          audioRef.current!.currentTime = 0;
+        }).catch(e => console.error("Audio unlock failed:", e));
+      }
     }
   }, [isLoaded, prayers, categories, categoryId, searchParams]);
 
@@ -361,3 +369,6 @@ export default function PrayerWalkPage() {
 
     
 
+
+
+    
