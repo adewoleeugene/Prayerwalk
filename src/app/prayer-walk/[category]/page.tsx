@@ -7,13 +7,53 @@ import { Prayer } from '@/lib/types';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ChevronLeft, ChevronRight, Loader2, ArrowLeft, Footprints, Check, Pause, Play } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader2, ArrowLeft, Footprints, Check, Pause, Play, BookOpen } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { useJournalStore } from '@/hooks/use-journal-store';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { getVerseText } from '@/ai/flows/get-verse-text';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const VerseDisplay = ({ reference }: { reference: string }) => {
+    const [verseText, setVerseText] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        if (reference) {
+            setIsLoading(true);
+            setVerseText(''); // Reset on reference change
+            getVerseText({ reference })
+                .then(result => setVerseText(result.text))
+                .catch(err => {
+                    console.error("Failed to fetch verse text:", err);
+                    setVerseText("Could not load verse.");
+                })
+                .finally(() => setIsLoading(false));
+        }
+    }, [reference]);
+
+    if (!reference) return null;
+
+    return (
+        <div className="mt-4 p-4 bg-secondary/50 rounded-lg border text-left">
+            <h4 className="font-semibold text-sm flex items-center gap-2 mb-2">
+                <BookOpen className="h-4 w-4" />
+                {reference}
+            </h4>
+            {isLoading ? (
+                <div className="space-y-2">
+                    <Skeleton className="h-4 w-full" />
+                    <Skeleton className="h-4 w-5/6" />
+                </div>
+            ) : (
+                <p className="text-sm text-secondary-foreground italic">"{verseText}"</p>
+            )}
+        </div>
+    );
+};
 
 
 export default function PrayerWalkPage() {
@@ -263,7 +303,7 @@ export default function PrayerWalkPage() {
                                 <Card className="shadow-lg">
                                     <CardContent className="p-6 text-center space-y-4">
                                         <p className="text-lg leading-relaxed">{prayer.title}</p>
-                                        {prayer.bibleVerse && <p className="text-sm text-muted-foreground">{prayer.bibleVerse}</p>}
+                                        {prayer.bibleVerse && <VerseDisplay reference={prayer.bibleVerse} />}
                                     </CardContent>
                                 </Card>
                             </CarouselItem>

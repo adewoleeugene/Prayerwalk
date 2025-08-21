@@ -13,3 +13,4 @@ import '@/ai/flows/analyze-sermon-document.ts';
 import '@/ai/flows/propose-category-flow.ts';
 import '@/ai/flows/extract-text-from-document.ts';
 import '@/ai/flows/ask-question-on-notes-flow.ts';
+import '@/ai/flows/get-verse-text.ts';
