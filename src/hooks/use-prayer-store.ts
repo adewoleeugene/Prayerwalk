@@ -8,7 +8,7 @@ import { suggestAlternativeCategory, SuggestAlternativeCategoryOutput } from '@/
 
 const PRAYERS_STORAGE_KEY = 'prayersmart-prayers';
 const CATEGORIES_STORAGE_KEY = 'prayersmart-categories';
-const GOAL_STORAGE_KEY = 'prayersmart-goal';
+const GOAL_STORAGE_KEY = 'praysmart-goal';
 
 const initialCategories: Category[] = [];
 
@@ -103,9 +103,9 @@ const deduplicateCategories = (categories: Category[]): Category[] => {
 
 
 export const usePrayerStore = () => {
-  const prayers = useSyncExternalStore(prayersStore.subscribe, prayersStore.get);
-  const categories = useSyncExternalStore(categoriesStore.subscribe, categoriesStore.get);
-  const goal = useSyncExternalStore(goalStore.subscribe, goalStore.get);
+  const prayers = useSyncExternalStore(prayersStore.subscribe, prayersStore.get, () => []);
+  const categories = useSyncExternalStore(categoriesStore.subscribe, categoriesStore.get, () => initialCategories);
+  const goal = useSyncExternalStore(goalStore.subscribe, goalStore.get, () => initialGoal);
   
   const [isLoaded, setIsLoaded] = useState(false);
   const [categorySuggestion, setCategorySuggestion] = useState<CategorySuggestion | null>(null);
