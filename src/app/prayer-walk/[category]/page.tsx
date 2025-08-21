@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { Prayer } from '@/lib/types';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
@@ -82,6 +82,9 @@ export default function PrayerWalkPage() {
   const [countdown, setCountdown] = useState<number | null>(null);
   const [isPaused, setIsPaused] = useState(false);
 
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const beepSoundDataUri = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA="; // A short, simple beep
+
   useEffect(() => {
     if (!api) {
       return
@@ -91,8 +94,14 @@ export default function PrayerWalkPage() {
     setCurrent(api.selectedScrollSnap() + 1)
  
     api.on("select", () => {
-      setCurrent(api.selectedScrollSnap() + 1)
+      setCurrent(api.selectedScrollSnap() + 1);
       resetCountdown();
+      
+      // Play sound on prayer change
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(e => console.error("Error playing beep sound:", e));
+      }
     })
   }, [api])
 
@@ -268,6 +277,7 @@ export default function PrayerWalkPage() {
 
   return (
     <div className="flex flex-col h-screen bg-background p-4">
+        <audio ref={audioRef} src={beepSoundDataUri} preload="auto" />
         {isSessionEnded ? (
              <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
                 <AlertDialog open>
@@ -350,3 +360,4 @@ export default function PrayerWalkPage() {
 }
 
     
+
