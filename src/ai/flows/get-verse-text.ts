@@ -22,6 +22,7 @@ const GetVerseTextOutputSchema = z.object({
 export type GetVerseTextOutput = z.infer<typeof GetVerseTextOutputSchema>;
 
 export async function getVerseText(input: GetVerseTextInput): Promise<GetVerseTextOutput> {
+  // Direct call to the flow - caching will be handled on the client side
   return getVerseTextFlow(input);
 }
 

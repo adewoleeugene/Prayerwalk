@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { FolderPlus, Footprints, Sparkles, Trash2, ArrowRight } from 'lucide-react';
 import { getDailyVerse, DailyVerse } from '@/ai/flows/get-daily-verse';
+import { cachedAIFlow } from '@/lib/ai-cache';
 import { Skeleton } from './ui/skeleton';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { PrayerCard } from './prayer-card';
@@ -18,6 +19,8 @@ import { useToast } from '@/hooks/use-toast';
 import { format, subDays, isToday } from 'date-fns';
 import { analyzePrayerActivity, AnalyzePrayerActivityOutput } from '@/ai/flows/analyze-prayer-activity';
 import { useJournalStore } from '@/hooks/use-journal-store';
+import { StreakCounter } from './streak-counter';
+
 
 
 type HomePageProps = {
@@ -25,12 +28,7 @@ type HomePageProps = {
   setView: (view: View) => void;
 };
 
-const VERSE_STORAGE_KEY = 'praysmart-daily-verse';
 
-type StoredVerse = {
-  date: string; // ISO date string
-  verse: DailyVerse;
-};
 
 export function HomePage({ onCaptureClick, setView }: HomePageProps) {
   const { user } = useAuth();
@@ -52,27 +50,19 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
 
     const fetchOrLoadVerse = async () => {
       setIsLoadingVerse(true);
-      const todayStr = new Date().toISOString().split('T')[0];
+      const today = new Date().toDateString();
+      
       try {
-        const storedItem = localStorage.getItem(VERSE_STORAGE_KEY);
-        if (storedItem) {
-          const storedVerse: StoredVerse = JSON.parse(storedItem);
-          if (storedVerse.date === todayStr && storedVerse.verse) {
-            setDailyVerse(storedVerse.verse);
-            setIsLoadingVerse(false);
-            return;
-          }
-        }
-      } catch (error) {
-        console.error("Failed to load verse from localStorage", error);
-        localStorage.removeItem(VERSE_STORAGE_KEY);
-      }
-
-      try {
-        const verse = await getDailyVerse();
+        // Use cachedAIFlow for client-side caching with 24-hour TTL
+        const verse = await cachedAIFlow(
+          'getDailyVerse',
+          () => getDailyVerse(),
+          { date: today },
+          { ttl: 24 * 60 * 60 * 1000 } // 24 hours
+        );
+        
         if (verse && verse.verse && verse.reference) {
-            setDailyVerse(verse);
-            localStorage.setItem(VERSE_STORAGE_KEY, JSON.stringify({ date: todayStr, verse }));
+          setDailyVerse(verse);
         }
       } catch (error) {
         console.error("Failed to fetch daily verse:", error);
@@ -168,6 +158,8 @@ export function HomePage({ onCaptureClick, setView }: HomePageProps) {
               )}
             </CardContent>
           </Card>
+
+          <StreakCounter collapsible={true} linkToActivities={true} />
 
           <div className="grid grid-cols-3 gap-2">
             <Button size="lg" className="h-20 flex-col gap-1 text-xs" onClick={() => setView({type: 'prayer-walk'})}>

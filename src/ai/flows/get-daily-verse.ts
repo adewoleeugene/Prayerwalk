@@ -16,6 +16,7 @@ const DailyVerseSchema = z.object({
 export type DailyVerse = z.infer<typeof DailyVerseSchema>;
 
 export async function getDailyVerse(): Promise<DailyVerse> {
+  // Direct call to the flow - caching will be handled on the client side
   return getDailyVerseFlow();
 }
 

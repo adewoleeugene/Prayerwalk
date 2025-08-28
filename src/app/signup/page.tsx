@@ -5,16 +5,22 @@ import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Loader2 } from "lucide-react";
+import { useOnboardingStore } from "@/hooks/use-onboarding-store";
 
 export default function SignupPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const { isOnboardingCompleted } = useOnboardingStore();
   
   useEffect(() => {
     if (!loading && user) {
-      router.push('/');
+      if (isOnboardingCompleted) {
+        router.push('/');
+      } else {
+        router.push('/onboarding');
+      }
     }
-  }, [user, loading, router]);
+  }, [user, loading, isOnboardingCompleted, router]);
 
   if (loading || user) {
     return (

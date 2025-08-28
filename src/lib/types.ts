@@ -34,6 +34,23 @@ export interface Goal {
     dailyPrayerTime: number; // in minutes
 }
 
+export interface StreakData {
+  currentStreak: number;
+  longestStreak: number;
+  lastPrayerDate: string | null; // ISO date string
+  todayCompleted: boolean;
+  streakHistory: StreakHistoryEntry[];
+}
+
+export interface StreakHistoryEntry {
+  date: string; // ISO date string (YYYY-MM-DD)
+  completed: boolean;
+  prayerTimeMinutes: number; // Total prayer time in minutes for the day
+  prayerCount: number; // Number of prayer sessions (kept for backward compatibility)
+}
+
+
+
 // Schemas for propose-category-flow
 export const ProposeCategoryInputSchema = z.object({
   prayerPoints: z.array(z.string()).describe('A list of prayer points.'),

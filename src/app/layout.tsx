@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { AuthProvider } from '@/hooks/use-auth';
+import ErrorBoundary from '@/components/error-boundary';
 
 export const metadata: Metadata = {
   title: 'PraySmart',
@@ -22,10 +23,12 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;500;700;900&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased">
-        <AuthProvider>
-          {children}
-        </AuthProvider>
+      <body className="font-body antialiased" suppressHydrationWarning>
+        <ErrorBoundary>
+          <AuthProvider>
+            {children}
+          </AuthProvider>
+        </ErrorBoundary>
         <Toaster />
       </body>
     </html>

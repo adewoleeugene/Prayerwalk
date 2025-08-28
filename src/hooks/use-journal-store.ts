@@ -78,8 +78,16 @@ const durationStore = createStore<number | null>(LAST_SESSION_DURATION_KEY, 0);
 
 
 export const useJournalStore = () => {
-  const entries = useSyncExternalStore(entriesStore.subscribe, entriesStore.get);
-  const lastSessionDuration = useSyncExternalStore(durationStore.subscribe, durationStore.get);
+  const entries = useSyncExternalStore(
+    entriesStore.subscribe, 
+    entriesStore.get,
+    () => [] // getServerSnapshot - return empty array during SSR
+  );
+  const lastSessionDuration = useSyncExternalStore(
+    durationStore.subscribe, 
+    durationStore.get,
+    () => 0 // getServerSnapshot - return 0 during SSR
+  );
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {

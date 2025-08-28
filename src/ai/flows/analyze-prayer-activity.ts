@@ -40,6 +40,7 @@ export type AnalyzePrayerActivityOutput = z.infer<typeof AnalyzePrayerActivityOu
 
 
 export async function analyzePrayerActivity(input: AnalyzePrayerActivityInput): Promise<AnalyzePrayerActivityOutput> {
+  // Server actions don't use client-side caching
   return analyzePrayerActivityFlow(input);
 }
 

@@ -1,31 +1,40 @@
-import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { initializeApp, getApps, getApp as getFirebaseAppInstance, FirebaseApp } from "firebase/app";
 import { getAuth, Auth } from "firebase/auth";
+import { firebaseConfig } from "./firebase-config";
 
-const firebaseConfig = {
-  projectId: "praysmart",
-  appId: "1:194925693704:web:b1440f274a22c8fa94babd",
-  storageBucket: "praysmart.appspot.com",
-  apiKey: "AIzaSyCXbZotQkt-sWoQIDqk70_D4197np3xMcI",
-  authDomain: "praysmart.firebaseapp.com",
-  messagingSenderId: "194925693704"
+let app: FirebaseApp | null = null;
+let auth: Auth | null = null;
+
+// Lazy initialize Firebase app
+const getFirebaseApp = (): FirebaseApp => {
+  if (typeof window === 'undefined') {
+    throw new Error('Firebase should only be initialized on the client side');
+  }
+  
+  if (!app) {
+    if (getApps().length === 0) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getFirebaseAppInstance();
+    }
+  }
+  return app;
 };
 
-
-let app: FirebaseApp;
-if (getApps().length === 0) {
-  app = initializeApp(firebaseConfig);
-} else {
-  app = getApp();
-}
-
-let auth: Auth;
-// This function helps avoid issues with server-side rendering (SSR)
-// by ensuring that getAuth() is only called on the client.
-export const getFirebaseAuth = () => {
+// Optimized auth initialization with better error handling
+export const getFirebaseAuth = (): Auth => {
+  if (typeof window === 'undefined') {
+    throw new Error('Firebase Auth should only be accessed on the client side');
+  }
+  
   if (!auth) {
-    auth = getAuth(app);
+    const firebaseApp = getFirebaseApp();
+    auth = getAuth(firebaseApp);
+    
+    // Enable auth persistence for better performance
+    auth.settings.appVerificationDisabledForTesting = false;
   }
   return auth;
-}
+};
 
-export { app };
+export { getFirebaseApp as getApp };

@@ -17,6 +17,9 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import type { View } from '@/app/page';
+import { StreakCounter } from '@/components/streak-counter';
+import { useRouter } from 'next/navigation';
+
 
 
 const ChartTooltipContent = ({ active, payload, label }: any) => {
@@ -88,10 +91,11 @@ const StatCard = ({ title, value, goal, icon: Icon }: { title: string, value: st
     </div>
 );
 
-export function ActivityPage({ setView }: { setView: (view: View) => void; }) {
+export function ActivityPage({ setView }: { setView?: (view: View) => void; }) {
     const { entries, isLoaded: isJournalLoaded } = useJournalStore();
     const { prayers, categories, goal, setGoal, isLoaded: isPrayerLoaded } = usePrayerStore();
     const { toast } = useToast();
+    const router = useRouter();
 
     const [currentDate, setCurrentDate] = useState(startOfDay(new Date()));
     const [selectedDate, setSelectedDate] = useState(startOfDay(new Date()));
@@ -200,7 +204,7 @@ export function ActivityPage({ setView }: { setView: (view: View) => void; }) {
     return (
         <>
             <header className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-                <Button variant="ghost" size="icon" onClick={() => setView({ type: 'home' })}>
+                <Button variant="ghost" size="icon" onClick={() => setView ? setView({ type: 'home' }) : router.push('/')}>
                     <ArrowLeft />
                 </Button>
                 <h1 className="text-xl font-bold font-headline">My Activity</h1>
@@ -239,11 +243,13 @@ export function ActivityPage({ setView }: { setView: (view: View) => void; }) {
                         ))}
                     </div>
 
+                    <StreakCounter />
+
                     <Card>
                         <CardContent className="p-4 flex flex-wrap items-center justify-around gap-4">
-                           <StatCard title="Prayers Added" value={dailyStats.prayersAdded?.toString() || '0'} icon={PlusCircle} />
-                           <StatCard title="Prayer Time" value={`${dailyStats.prayerTime?.toString() || '0'}`} goal={`${goal.dailyPrayerTime} min`} icon={Clock} />
-                           <StatCard title="Answered" value={dailyStats.answeredPrayers?.toString() || '0'} icon={CheckCircle} />
+                           <StatCard title="Prayers Added" value={(dailyStats as any).prayersAdded?.toString() || '0'} icon={PlusCircle} />
+                           <StatCard title="Prayer Time" value={`${(dailyStats as any).prayerTime?.toString() || '0'}`} goal={`${goal.dailyPrayerTime} min`} icon={Clock} />
+                           <StatCard title="Answered" value={(dailyStats as any).answeredPrayers?.toString() || '0'} icon={CheckCircle} />
                         </CardContent>
                     </Card>
                     
@@ -282,14 +288,14 @@ export function ActivityPage({ setView }: { setView: (view: View) => void; }) {
                         <CardContent className="p-4 pt-0 space-y-2">
                            <div className="flex justify-between items-center">
                                 <p className="text-sm text-muted-foreground">Total Prayer Time (Week)</p>
-                                <p className="font-bold">{weeklySummary.totalTime} min
-                                    {weeklySummary.weeklyGoal > 0 && <span className="text-sm font-normal text-muted-foreground"> / {weeklySummary.weeklyGoal} min</span>}
+                                <p className="font-bold">{(weeklySummary as any).totalTime || 0} min
+                                    {(weeklySummary as any).weeklyGoal > 0 && <span className="text-sm font-normal text-muted-foreground"> / {(weeklySummary as any).weeklyGoal} min</span>}
                                 </p>
                            </div>
                            <Separator />
                            <div className="flex justify-between items-center">
                                 <p className="text-sm text-muted-foreground">Most Prayed Category</p>
-                                <p className="font-bold">{weeklySummary.mostPrayedCategory}</p>
+                                <p className="font-bold">{(weeklySummary as any).mostPrayedCategory || 'N/A'}</p>
                            </div>
                         </CardContent>
                     </Card>

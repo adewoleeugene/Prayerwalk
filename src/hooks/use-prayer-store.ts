@@ -16,6 +16,11 @@ const initialGoal: Goal = {
     dailyPrayerTime: 30, // default 30 minutes
 };
 
+// Cached server snapshots to prevent infinite loops
+const emptyPrayersSnapshot: Prayer[] = [];
+const emptyCategoriesSnapshot: Category[] = [];
+const initialGoalSnapshot: Goal = { dailyPrayerTime: 30 };
+
 // This type is defined here to be accessible by components that use the hook
 // without creating a circular dependency or a separate types file for this one-off case.
 export type CategorySuggestion = {
@@ -103,9 +108,9 @@ const deduplicateCategories = (categories: Category[]): Category[] => {
 
 
 export const usePrayerStore = () => {
-  const prayers = useSyncExternalStore(prayersStore.subscribe, prayersStore.get, () => []);
-  const categories = useSyncExternalStore(categoriesStore.subscribe, categoriesStore.get, () => initialCategories);
-  const goal = useSyncExternalStore(goalStore.subscribe, goalStore.get, () => initialGoal);
+  const prayers = useSyncExternalStore(prayersStore.subscribe, prayersStore.get, () => emptyPrayersSnapshot);
+  const categories = useSyncExternalStore(categoriesStore.subscribe, categoriesStore.get, () => emptyCategoriesSnapshot);
+  const goal = useSyncExternalStore(goalStore.subscribe, goalStore.get, () => initialGoalSnapshot);
   
   const [isLoaded, setIsLoaded] = useState(false);
   const [categorySuggestion, setCategorySuggestion] = useState<CategorySuggestion | null>(null);

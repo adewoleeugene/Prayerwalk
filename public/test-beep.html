@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Beep Sound Test</title>
+</head>
+<body>
+    <h1>Beep Sound Test</h1>
+    <audio id="testAudio" controls>
+        <source src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=" type="audio/wav">
+        Your browser does not support the audio element.
+    </audio>
+    <br><br>
+    <button onclick="playBeep()">Test Beep</button>
+    <div id="status"></div>
+    
+    <script>
+        const audio = document.getElementById('testAudio');
+        const status = document.getElementById('status');
+        
+        function playBeep() {
+            status.innerHTML = 'Attempting to play...';
+            audio.currentTime = 0;
+            audio.play()
+                .then(() => {
+                    status.innerHTML = 'Sound played successfully!';
+                })
+                .catch(error => {
+                    status.innerHTML = 'Error: ' + error.message;
+                    console.error('Audio play error:', error);
+                });
+        }
+        
+        // Test audio loading
+        audio.addEventListener('loadeddata', () => {
+            console.log('Audio loaded successfully');
+            status.innerHTML = 'Audio loaded. Duration: ' + audio.duration + 's';
+        });
+        
+        audio.addEventListener('error', (e) => {
+            console.error('Audio loading error:', e);
+            status.innerHTML = 'Audio loading failed: ' + e.message;
+        });
+    </script>
+</body>
+</html>
