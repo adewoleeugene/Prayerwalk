@@ -1,19 +1,19 @@
 
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
 
 type TimingMode = 'per_prayer' | 'total';
 
-export default function PrayerWalkSetupPage() {
+function PrayerWalkSetupPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { categories, prayers } = usePrayerStore();
@@ -135,5 +135,17 @@ export default function PrayerWalkSetupPage() {
           </Button>
         </footer>
     </div>
+  );
+}
+
+export default function PrayerWalkSetupPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    }>
+      <PrayerWalkSetupPageContent />
+    </Suspense>
   );
 }

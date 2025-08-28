@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useEffect, useState, useMemo, useRef, useCallback } from 'react';
+import React, { useEffect, useState, useMemo, useRef, useCallback, Suspense } from 'react';
 import { usePrayerStore } from '@/hooks/use-prayer-store';
 import { useStreakStore } from '@/hooks/use-streak-store';
 import { Prayer } from '@/lib/types';
@@ -75,7 +75,7 @@ const VerseDisplay = ({ reference }: { reference: string }) => {
   );
 };
 
-export default function PrayerWalkPage() {
+function PrayerWalkPageContent() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -630,6 +630,18 @@ export default function PrayerWalkPage() {
           <source src={beepSoundDataUri} type="audio/wav" />
         </audio>
     </div>
+  );
+}
+
+export default function PrayerWalkPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    }>
+      <PrayerWalkPageContent />
+    </Suspense>
   );
 }
 
