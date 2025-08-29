@@ -1,24 +1,22 @@
 
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { useAuth } from '@/hooks/use-auth';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Camera, Eye, EyeOff, Upload, X } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { updateProfile, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { getFirebaseAuth } from '@/lib/firebase';
 import type { View } from '@/app/page';
 
 interface ProfileFormData {
   displayName: string;
-  profilePicture: string;
 }
 
 interface PasswordFormData {
@@ -30,12 +28,10 @@ interface PasswordFormData {
 export function ProfilePage({ setView }: { setView: (view: View) => void; }) {
   const { user } = useAuth();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Form states
   const [profileData, setProfileData] = useState<ProfileFormData>({
-    displayName: user?.displayName || '',
-    profilePicture: user?.photoURL || ''
+    displayName: user?.displayName || ''
   });
   
   const [passwordData, setPasswordData] = useState<PasswordFormData>({
@@ -93,41 +89,7 @@ export function ProfilePage({ setView }: { setView: (view: View) => void; }) {
     return Object.keys(newErrors).length === 0;
   };
   
-  // Handle profile picture upload
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    
-    // Validate file type
-    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!validTypes.includes(file.type)) {
-      toast({
-        title: 'Invalid file type',
-        description: 'Please select a valid image file (JPEG, PNG, GIF, or WebP)',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
-    // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
-      toast({
-        title: 'File too large',
-        description: 'Please select an image smaller than 5MB',
-        variant: 'destructive'
-      });
-      return;
-    }
-    
-    // Create preview URL
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const result = e.target?.result as string;
-      setProfileData(prev => ({ ...prev, profilePicture: result }));
-      setHasChanges(true);
-    };
-    reader.readAsDataURL(file);
-  };
+
   
   // Handle profile update
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -137,8 +99,7 @@ export function ProfilePage({ setView }: { setView: (view: View) => void; }) {
     setIsLoading(true);
     try {
       await updateProfile(user, {
-        displayName: profileData.displayName,
-        photoURL: profileData.profilePicture
+        displayName: profileData.displayName
       });
       
       toast({
@@ -226,8 +187,7 @@ export function ProfilePage({ setView }: { setView: (view: View) => void; }) {
   // Reset changes
   const handleCancel = () => {
     setProfileData({
-      displayName: user?.displayName || '',
-      profilePicture: user?.photoURL || ''
+      displayName: user?.displayName || ''
     });
     setHasChanges(false);
     setErrors({});
@@ -254,64 +214,11 @@ export function ProfilePage({ setView }: { setView: (view: View) => void; }) {
               <CardHeader>
                 <CardTitle>Profile Information</CardTitle>
                 <CardDescription>
-                  Update your display name and profile picture.
+                  Update your display name.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleUpdateProfile} className="space-y-6">
-                  {/* Profile Picture Section */}
-                  <div className="flex flex-col items-center space-y-4">
-                    <div className="relative">
-                      <Avatar className="w-24 h-24">
-                        <AvatarImage src={profileData.profilePicture} alt="Profile" />
-                        <AvatarFallback className="text-lg">
-                          {profileData.displayName.charAt(0).toUpperCase() || 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="secondary"
-                        className="absolute -bottom-2 -right-2 rounded-full"
-                        onClick={() => fileInputRef.current?.click()}
-                      >
-                        <Camera className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <div className="text-center">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="mb-2"
-                      >
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload New Picture
-                      </Button>
-                      {profileData.profilePicture && (
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleProfileChange('profilePicture', '')}
-                        >
-                          <X className="w-4 h-4 mr-1" />
-                          Remove
-                        </Button>
-                      )}
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Supports JPEG, PNG, GIF, WebP (max 5MB)
-                      </p>
-                    </div>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                    />
-                  </div>
-                  
                   {/* Form Fields */}
                   <div className="space-y-4">
                     <div className="space-y-2">
