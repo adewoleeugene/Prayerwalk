@@ -41,8 +41,9 @@ const prompt = ai.definePrompt({
 **YOUR RULES:**
 1.  **Analyze the Text:** First, create relevant prayer points based on the user's text.
 2.  **Find the Best Verse:** For each prayer point, find the single most thematically appropriate and encouraging Bible verse.
-3.  **Deep Interpretation:** Do NOT perform simple keyword matching. You must analyze the underlying emotional intent, context, and any metaphors within the prayer. For example, a prayer about a 'rock' is about stability, not geology.
-4.  **Guardrail:** If you cannot find a verse that is a strong, contextually relevant match for a prayer point, it is better to leave the 'bibleVerse' field empty than to provide a poor or nonsensical match.
+3.  **Bible Verse Format:** Each Bible verse MUST be formatted as "Reference: Full verse text" (e.g., "Philippians 4:13: I can do all things through Christ who strengthens me."). Always include both the complete reference and the full text of the verse.
+4.  **Deep Interpretation:** Do NOT perform simple keyword matching. You must analyze the underlying emotional intent, context, and any metaphors within the prayer. For example, a prayer about a 'rock' is about stability, not geology.
+5.  **Guardrail:** If you cannot find a verse that is a strong, contextually relevant match for a prayer point, it is better to leave the 'bibleVerse' field empty than to provide a poor or nonsensical match.
 
 Text to analyze:
 {{{text}}}

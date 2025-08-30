@@ -43,6 +43,8 @@ const prompt = ai.definePrompt({
 First, extract all the text from the following image.
 Then, analyze the extracted text and suggest prayer points and relevant Bible verses.
 
+**IMPORTANT:** Each Bible verse MUST be formatted as "Reference: Full verse text" (e.g., "Philippians 4:13: I can do all things through Christ who strengthens me."). Always include both the complete reference and the full text of the verse.
+
 Image: {{media url=photoDataUri}}
 
 Format your response as a JSON object containing the full extracted text and a list of prayer points, where each prayer point includes the point itself and a suggested Bible verse.

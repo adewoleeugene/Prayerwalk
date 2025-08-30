@@ -46,6 +46,8 @@ const prompt = ai.definePrompt({
 2.  Write a concise, one-paragraph summary of the main themes and topics discussed. This will be the 'summary'.
 3.  Based on the content, generate a list of actionable prayer points with relevant Bible verses.
 
+**IMPORTANT:** Each Bible verse MUST be formatted as "Reference: Full verse text" (e.g., "Philippians 4:13: I can do all things through Christ who strengthens me."). Always include both the complete reference and the full text of the verse.
+
 Format your response as a single JSON object.
 
 Audio:
